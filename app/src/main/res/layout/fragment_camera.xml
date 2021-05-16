@@ -1,0 +1,134 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context=".fragments.CameraFragment">
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/previewContainer"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintVertical_bias="0.4">
+
+        <FrameLayout
+            android:id="@+id/cameraPreview"
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:layout_gravity="center"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
+    <View
+        android:id="@+id/overlay"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:foreground="@android:color/transparent"
+        app:layout_constraintBottom_toBottomOf="@+id/previewContainer"
+        app:layout_constraintEnd_toEndOf="@+id/previewContainer"
+        app:layout_constraintStart_toStartOf="@+id/previewContainer"
+        app:layout_constraintTop_toTopOf="@+id/previewContainer" />
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/cameraToolBar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center"
+        android:orientation="horizontal"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent">
+
+        <ImageView
+            android:id="@+id/filterToggle"
+            style="@style/Widget.AppCompat.Button.Borderless"
+            android:layout_width="70dp"
+            android:layout_height="80dp"
+            android:layout_marginStart="10dp"
+            android:scaleType="fitCenter"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            app:srcCompat="@drawable/filteric" />
+
+        <TextView
+            android:id="@+id/switchCameraSize"
+            style="@style/Widget.AppCompat.Button.Borderless"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="0 Mp"
+            android:textColor="@color/dark_yellow"
+            android:textStyle="bold"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toStartOf="@+id/flash"
+            app:layout_constraintStart_toEndOf="@+id/filterToggle"
+            app:layout_constraintTop_toTopOf="parent" />
+
+        <ImageView
+            android:id="@+id/flash"
+            style="@style/Widget.AppCompat.Button.Borderless"
+            android:layout_width="80dp"
+            android:layout_height="80dp"
+            android:layout_marginEnd="10dp"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            app:srcCompat="@drawable/flashic" />
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
+    <ImageButton
+        android:id="@+id/captureButton"
+        android:layout_width="60dp"
+        android:layout_height="60dp"
+        android:layout_marginBottom="20dp"
+        android:background="@drawable/shutteric"
+        android:scaleType="fitCenter"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent" />
+
+    <ImageView
+        android:id="@+id/pictureThumbnail"
+        android:layout_width="50dp"
+        android:layout_height="50dp"
+        android:src="@drawable/galleryic"
+        app:layout_constraintBottom_toBottomOf="@+id/captureButton"
+        app:layout_constraintEnd_toStartOf="@+id/captureButton"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="@+id/captureButton" />
+
+    <TextView
+        android:id="@+id/pictureCount"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:gravity="center"
+        android:text="0"
+        android:textAlignment="center"
+        android:textColor="@color/dark_yellow"
+        android:textStyle="bold"
+        app:layout_constraintBottom_toTopOf="@+id/pictureThumbnail"
+        app:layout_constraintEnd_toEndOf="@+id/pictureThumbnail"
+        app:layout_constraintHorizontal_bias="0.8"
+        app:layout_constraintStart_toStartOf="@+id/pictureThumbnail" />
+
+    <ImageView
+        android:id="@+id/finishCapturing"
+        style="@style/Widget.AppCompat.Button.Borderless"
+        android:layout_width="80dp"
+        android:layout_height="0dp"
+        android:src="@drawable/nextic"
+        app:layout_constraintBottom_toBottomOf="@+id/captureButton"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toEndOf="@+id/captureButton"
+        app:layout_constraintTop_toTopOf="@+id/captureButton" />
+
+</androidx.constraintlayout.widget.ConstraintLayout>

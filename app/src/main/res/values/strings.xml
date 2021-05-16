@@ -1,0 +1,26 @@
+<resources>
+    <string name="app_name">B Scanner</string>
+    <!-- TODO: Remove or change this placeholder text -->
+    <string name="hello_blank_fragment">Hello blank fragment</string>
+
+    <string name="title">B Scanner</string>
+    <string name="open">Open</string>
+    <string name="close">Close</string>
+    <string name="app_preferences">PDF_SCANNER_PREFERENCES</string>
+    <string name="page_size">PAGE_SIZE</string>
+    <string name="page_size_index">PAGE_SIZE_INDEX</string>
+    <string name="camera_size_index">CAMERA_SIZE_INDEX</string>
+    <string name="master_password">pdf scanner</string>
+    <string name="pdf_prefix">PDF_</string>
+    <string name="page_prefix">PAGE-</string>
+    <string name="image_prefix">IMAGE_</string>
+    <string name="pdf_extension">.pdf</string>
+    <string name="page_extension">.page</string>
+    <string name="image_extension">.image</string>
+    <string name="jpeg_extension">.jpg</string>
+    <string name="png_extension">.png</string>
+    <string name="storage_location">Output</string>
+    <string name="temporary_location">temp</string>
+    <string name="cache_location">cache</string>
+
+</resources>

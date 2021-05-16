@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    //Button style
+    <style name="Button.Theme" parent="Widget.MaterialComponents.Button">
+        <item name="materialThemeOverlay">@style/ButtonStyleTextColor</item>
+        <item name="android:textColor">@color/dark_blue</item>
+    </style>
+
+    <style name="ButtonStyleTextColor">
+        <item name="colorPrimary">@color/dark_yellow</item>
+    </style>
+
+    //FAButton style
+    <style name="FAButton.Theme" parent="Widget.MaterialComponents.FloatingActionButton">
+        <item name="backgroundTint">@color/dark_yellow</item>
+        <item name="tint">@color/dark_blue</item>
+    </style>
+
+
+    //Dialog style
+    <style name="RoundShapeTheme" parent="ThemeOverlay.MaterialComponents.Dialog.Alert">
+        <item name="shapeAppearanceMediumComponent">@style/RoundShapeAppearance</item>
+    </style>
+
+    <style name="RoundShapeAppearance" parent="ShapeAppearance.MaterialComponents.MediumComponent">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSize">16dp</item>
+    </style>
+
+</resources>
