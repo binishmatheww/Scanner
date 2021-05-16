@@ -44,7 +44,8 @@
             android:id="@+id/filterCardView"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            app:cardBackgroundColor="@color/dark_blue"
+            android:layout_marginStart="10dp"
+            android:layout_marginEnd="10dp"
             app:cardCornerRadius="5dp"
             app:cardElevation="20dp"
             app:layout_constraintEnd_toEndOf="parent"
@@ -84,103 +85,123 @@
 
         </com.google.android.material.card.MaterialCardView>
 
-        <LinearLayout
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_marginEnd="10dp"
-            android:background="@color/dark_blue"
-            android:gravity="center"
-            android:orientation="vertical"
-            app:layout_constraintBottom_toBottomOf="@+id/linearLayout"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintTop_toTopOf="@+id/linearLayout">
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/reorderCardView"
+            android:layout_width="wrap_content"
+            android:layout_height="0dp"
+            app:cardCornerRadius="5dp"
+            app:cardElevation="20dp"
+            app:layout_constraintBottom_toBottomOf="@+id/rotateCardView"
+            app:layout_constraintEnd_toEndOf="@+id/filterCardView"
+            app:layout_constraintTop_toTopOf="@+id/rotateCardView">
 
-            <ImageView
-                android:id="@+id/up"
-                style="@style/Widget.AppCompat.Button.Borderless"
-                android:layout_width="80dp"
-                android:layout_height="80dp"
-                app:srcCompat="@drawable/reordup" />
-
-            <TextView
-                android:id="@+id/deletepage"
-                style="@style/Widget.AppCompat.Button.Borderless"
-                android:layout_width="80dp"
+            <LinearLayout
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:gravity="center"
-                android:text="Delete"
-                android:textAlignment="center"
-                android:textAppearance="@style/TextAppearance.AppCompat.Body1"
-                android:textColor="@color/dark_yellow" />
+                android:orientation="vertical"
+                app:layout_constraintBottom_toBottomOf="@+id/linearLayout"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintTop_toTopOf="@+id/linearLayout">
 
-            <ImageView
-                android:id="@+id/down"
-                style="@style/Widget.AppCompat.Button.Borderless"
-                android:layout_width="80dp"
-                android:layout_height="80dp"
-                app:srcCompat="@drawable/reorddown" />
+                <ImageView
+                    android:id="@+id/up"
+                    style="@style/Widget.AppCompat.Button.Borderless"
+                    android:layout_width="80dp"
+                    android:layout_height="80dp"
+                    app:srcCompat="@drawable/reordup" />
 
-        </LinearLayout>
+                <TextView
+                    android:id="@+id/deletepage"
+                    style="@style/Widget.AppCompat.Button.Borderless"
+                    android:layout_width="80dp"
+                    android:layout_height="wrap_content"
+                    android:gravity="center"
+                    android:text="Delete"
+                    android:textAlignment="center"
+                    android:textAppearance="@style/TextAppearance.AppCompat.Body1"
+                    android:textColor="@color/dark_yellow" />
 
-        <LinearLayout
-            android:id="@+id/linearLayout"
+                <ImageView
+                    android:id="@+id/down"
+                    style="@style/Widget.AppCompat.Button.Borderless"
+                    android:layout_width="80dp"
+                    android:layout_height="80dp"
+                    app:srcCompat="@drawable/reorddown" />
+
+            </LinearLayout>
+
+        </com.google.android.material.card.MaterialCardView>
+
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/rotateCardView"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginStart="10dp"
-            android:background="@color/dark_blue"
-            android:gravity="center"
-            android:orientation="vertical"
+            app:cardCornerRadius="5dp"
+            app:cardElevation="20dp"
             app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintStart_toStartOf="@+id/filterCardView"
             app:layout_constraintTop_toBottomOf="@+id/filterCardView">
 
-            <ImageView
-                android:id="@+id/rotateanticlockwise"
-                style="?android:borderlessButtonStyle"
-                android:layout_width="60dp"
-                android:layout_height="60dp"
-                android:scaleType="fitCenter"
+            <LinearLayout
+                android:id="@+id/linearLayout"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center"
+                android:orientation="vertical"
                 app:layout_constraintBottom_toBottomOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toTopOf="parent"
-                app:srcCompat="@drawable/rotatebackic" />
+                app:layout_constraintTop_toBottomOf="@+id/filterCardView">
 
-            <ImageView
-                android:id="@+id/rotateclockwise"
-                style="?android:borderlessButtonStyle"
-                android:layout_width="60dp"
-                android:layout_height="60dp"
-                android:hapticFeedbackEnabled="true"
-                android:scaleType="fitCenter"
-                app:layout_constraintBottom_toBottomOf="parent"
-                app:layout_constraintStart_toEndOf="@+id/rotateanticlockwise"
-                app:layout_constraintTop_toTopOf="parent"
-                app:srcCompat="@drawable/rotateic" />
+                <ImageView
+                    android:id="@+id/rotateanticlockwise"
+                    style="?android:borderlessButtonStyle"
+                    android:layout_width="60dp"
+                    android:layout_height="60dp"
+                    android:scaleType="fitCenter"
+                    app:layout_constraintBottom_toBottomOf="parent"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toTopOf="parent"
+                    app:srcCompat="@drawable/rotatebackic" />
 
-            <Button
-                android:id="@+id/ocrfrompage"
-                style="@style/Widget.AppCompat.Button.Borderless.Colored"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:fontFamily="sans-serif"
-                android:text="OCR"
-                android:textAppearance="@style/TextAppearance.AppCompat.Body1"
-                android:textColor="@color/dark_yellow"
-                app:layout_constraintBottom_toBottomOf="parent"
-                app:layout_constraintEnd_toEndOf="parent"
-                app:layout_constraintTop_toTopOf="parent" />
+                <ImageView
+                    android:id="@+id/rotateclockwise"
+                    style="?android:borderlessButtonStyle"
+                    android:layout_width="60dp"
+                    android:layout_height="60dp"
+                    android:hapticFeedbackEnabled="true"
+                    android:scaleType="fitCenter"
+                    app:layout_constraintBottom_toBottomOf="parent"
+                    app:layout_constraintStart_toEndOf="@+id/rotateanticlockwise"
+                    app:layout_constraintTop_toTopOf="parent"
+                    app:srcCompat="@drawable/rotateic" />
 
-            <Button
-                android:id="@+id/crop"
-                style="@style/Widget.AppCompat.Button.Borderless.Colored"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Crop"
-                android:textAppearance="@style/TextAppearance.AppCompat.Body1"
-                android:textColor="@color/dark_yellow"
-                app:layout_constraintStart_toEndOf="@+id/rotateclockwise" />
+                <Button
+                    android:id="@+id/ocrfrompage"
+                    style="@style/Widget.AppCompat.Button.Borderless.Colored"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:fontFamily="sans-serif"
+                    android:text="OCR"
+                    android:textAppearance="@style/TextAppearance.AppCompat.Body1"
+                    android:textColor="@color/dark_yellow"
+                    app:layout_constraintBottom_toBottomOf="parent"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintTop_toTopOf="parent" />
 
-        </LinearLayout>
+                <Button
+                    android:id="@+id/crop"
+                    style="@style/Widget.AppCompat.Button.Borderless.Colored"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Crop"
+                    android:textAppearance="@style/TextAppearance.AppCompat.Body1"
+                    android:textColor="@color/dark_yellow"
+                    app:layout_constraintStart_toEndOf="@+id/rotateclockwise" />
+
+            </LinearLayout>
+
+        </com.google.android.material.card.MaterialCardView>
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 
