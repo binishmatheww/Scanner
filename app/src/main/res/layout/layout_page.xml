@@ -41,7 +41,7 @@
         app:layout_constraintTop_toTopOf="parent">
 
         <com.google.android.material.card.MaterialCardView
-            android:id="@+id/materialCardView"
+            android:id="@+id/filterCardView"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             app:cardBackgroundColor="@color/dark_blue"
@@ -61,7 +61,7 @@
                 <SeekBar
                     android:id="@+id/slider"
                     android:layout_width="0dp"
-                    android:layout_height="wrap_content"
+                    android:layout_height="50dp"
                     android:layout_gravity="center"
                     app:layout_constraintBottom_toBottomOf="parent"
                     app:layout_constraintEnd_toStartOf="@+id/apply"
@@ -132,7 +132,7 @@
             android:orientation="vertical"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@+id/materialCardView">
+            app:layout_constraintTop_toBottomOf="@+id/filterCardView">
 
             <ImageView
                 android:id="@+id/rotateanticlockwise"
