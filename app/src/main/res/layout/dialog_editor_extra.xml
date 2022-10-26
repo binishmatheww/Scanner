@@ -5,7 +5,7 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:minHeight="400dp"
-    tools:context=".fragments.dialogs.EditorExtraDialog">
+    tools:context=".views.fragments.dialogs.EditorExtraDialog">
 
     <TableRow
         android:id="@+id/editorExtraRow1"
