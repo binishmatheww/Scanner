@@ -2,15 +2,15 @@ package com.binishmatheww.scanner.views.utils
 
 import android.content.Context
 import android.content.Intent
-import android.database.Cursor
 import android.graphics.Bitmap
 import android.graphics.ColorMatrix
 import android.graphics.ColorMatrixColorFilter
 import android.hardware.Camera
 import android.net.Uri
-import android.os.*
-import android.provider.MediaStore
-import android.util.Log
+import android.os.Build
+import android.os.Bundle
+import android.os.VibrationEffect
+import android.os.Vibrator
 import androidx.activity.result.ActivityResultLauncher
 import androidx.fragment.app.Fragment
 import com.binishmatheww.scanner.R
