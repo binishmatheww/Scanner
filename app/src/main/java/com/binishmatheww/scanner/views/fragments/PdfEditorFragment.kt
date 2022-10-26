@@ -34,8 +34,6 @@ import com.binishmatheww.scanner.views.fragments.dialogs.EditorExtraDialog
 import com.binishmatheww.scanner.views.fragments.dialogs.EncryptPdfDialog
 import com.binishmatheww.scanner.views.fragments.dialogs.ProgressDialog
 import com.binishmatheww.scanner.views.fragments.dialogs.SplitPdfDialog
-import com.binishmatheww.scanner.listeners.*
-import com.binishmatheww.scanner.utils.*
 import com.binishmatheww.scanner.views.listeners.*
 import com.binishmatheww.scanner.views.utils.*
 import com.google.android.material.floatingactionbutton.FloatingActionButton

@@ -32,7 +32,9 @@
         <activity android:name="com.theartofdev.edmodo.cropper.CropImageActivity"
             android:theme="@style/Base.Theme.AppCompat"/>
 
-        <activity android:name=".views.LauncherActivity">
+        <activity
+            android:exported="true"
+            android:name=".views.LauncherActivity">
 
             <intent-filter android:label="View or edit pdf files">
                 <category android:name="android.intent.category.DEFAULT" />
