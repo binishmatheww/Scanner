@@ -8,10 +8,17 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.GravityCompat
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
 import com.binishmatheww.scanner.R
+import com.binishmatheww.scanner.common.constants.Routes
 import com.binishmatheww.scanner.views.fragments.HomeFragment
 import com.binishmatheww.scanner.views.fragments.PdfEditorFragment
 import com.binishmatheww.scanner.views.fragments.SplashScreenFragment
+import com.binishmatheww.scanner.views.screens.CameraScreen
+import com.binishmatheww.scanner.views.screens.HomeScreen
+import com.binishmatheww.scanner.views.screens.WelcomeScreen
 import com.binishmatheww.scanner.views.utils.clearTemporaryLocation
 import com.binishmatheww.scanner.views.utils.storageLocation
 import com.binishmatheww.scanner.views.utils.temporaryLocation
@@ -20,8 +27,6 @@ import kotlinx.coroutines.launch
 
 
 class LauncherActivity : AppCompatActivity() {
-
-    private var onBackPressedTwice = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -45,25 +50,42 @@ class LauncherActivity : AppCompatActivity() {
             NavHost(
                 navController = navController,
                 startDestination = Routes.welcomeScreen,
-            ){
+            ) {
 
                 composable(
                     route = Routes.welcomeScreen
-                ){
+                ) {
 
                     WelcomeScreen(
-                        onResume = {
-
+                        onComplete = {
                             navController.popBackStack()
-
                             navController.navigate(Routes.homeScreen)
-
-                            navigateToNoteIfExists()
-
                         }
                     )
 
                 }
+
+                composable(
+                    route = Routes.homeScreen
+                ) {
+
+                    HomeScreen(
+                        onCameraClick = {
+                            navController.navigate(Routes.cameraScreen)
+                        }
+                    )
+
+                }
+
+                composable(
+                    route = Routes.cameraScreen
+                ) {
+
+                    CameraScreen()
+
+                }
+
+            }
 
         }
 
