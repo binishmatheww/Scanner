@@ -45,18 +45,18 @@ android {
     productFlavors {
 
         stable {
-            buildConfigField 'boolean', 'SHOULD_PRINT_LOGS', "false"
+            buildConfigField 'boolean', 'PRE_RELEASE', "false"
             versionName "${versionMajor}.${versionMinor}.${versionBuild}"
         }
 
-        alpha {
-            buildConfigField 'boolean', 'SHOULD_PRINT_LOGS', "true"
-            versionName "${versionMajor}.${versionMinor}.${versionBuild}-alpha"
+        beta {
+            buildConfigField 'boolean', 'PRE_RELEASE', "true"
+            versionName "${versionMajor}.${versionMinor}.${versionBuild}-beta"
         }
 
-        beta {
-            buildConfigField 'boolean', 'SHOULD_PRINT_LOGS', "true"
-            versionName "${versionMajor}.${versionMinor}.${versionBuild}-beta"
+        alpha {
+            buildConfigField 'boolean', 'PRE_RELEASE', "true"
+            versionName "${versionMajor}.${versionMinor}.${versionBuild}-alpha"
         }
 
     }
