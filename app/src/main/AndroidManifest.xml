@@ -34,8 +34,7 @@
 
         <activity
             android:exported="true"
-            android:name=".views.LauncherActivity"
-            >
+            android:name=".views.LauncherActivity">
 
             <intent-filter android:label="View or edit pdf files">
                 <category android:name="android.intent.category.DEFAULT" />

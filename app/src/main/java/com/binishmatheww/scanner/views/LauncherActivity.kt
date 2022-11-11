@@ -3,100 +3,93 @@ package com.binishmatheww.scanner.views
 import android.os.Bundle
 import android.os.Handler
 import android.widget.Toast
+import androidx.activity.compose.setContent
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.GravityCompat
 import androidx.fragment.app.Fragment
+import androidx.lifecycle.lifecycleScope
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
 import com.binishmatheww.scanner.R
+import com.binishmatheww.scanner.common.constants.Routes
 import com.binishmatheww.scanner.views.fragments.HomeFragment
 import com.binishmatheww.scanner.views.fragments.PdfEditorFragment
 import com.binishmatheww.scanner.views.fragments.SplashScreenFragment
+import com.binishmatheww.scanner.views.screens.CameraScreen
+import com.binishmatheww.scanner.views.screens.HomeScreen
+import com.binishmatheww.scanner.views.screens.WelcomeScreen
 import com.binishmatheww.scanner.views.utils.clearTemporaryLocation
 import com.binishmatheww.scanner.views.utils.storageLocation
 import com.binishmatheww.scanner.views.utils.temporaryLocation
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 
 class LauncherActivity : AppCompatActivity() {
 
-    private var onBackPressedTwice = false
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_launcher)
 
+        lifecycleScope.launch {
 
-        temporaryLocation(this)
-        storageLocation(this)
+            temporaryLocation(this@LauncherActivity)
 
-        if(savedInstanceState == null){
-            clearTemporaryLocation(this)
-            supportFragmentManager.beginTransaction().replace(R.id.fContainer,
-                SplashScreenFragment(),"splashScreen").addToBackStack("splashScreen").commitAllowingStateLoss()
-            Handler().postDelayed({ loadHome(null) },2000)
-        }
-        else{
-            loadHome(supportFragmentManager.findFragmentByTag("home"))
-        }
-    }
+            storageLocation(this@LauncherActivity)
 
-    private fun loadHome(nullableFragment: Fragment?){
-        when {
-            nullableFragment!=null -> {
-                supportFragmentManager
-                        .beginTransaction()
-                        //.setCustomAnimations(R.animator.fade_in, R.animator.fade_out)
-                        .replace(R.id.fContainer, nullableFragment, nullableFragment.tag)
-                        .addToBackStack(nullableFragment.tag)
-                        .commitAllowingStateLoss()
-            }
-            else -> {
-                supportFragmentManager.beginTransaction()
-                        //.setCustomAnimations(R.animator.fade_in, R.animator.fade_out)
-                        .replace(R.id.fContainer, HomeFragment(), "home")
-                        .addToBackStack("home")
-                        .commitAllowingStateLoss()
-            }
+            delay(400)
+
+            window.setBackgroundDrawableResource(android.R.color.transparent)
+
         }
 
-        //Log.wtf("intent sent to Activity",intent?.scheme)
-        val uri = intent?.data
-        uri?.let {
-            val bundle = Bundle()
-            bundle.putString("uri",uri.toString())
-            val frag = PdfEditorFragment()
-            frag.arguments = bundle
-            supportFragmentManager.beginTransaction().replace(R.id.fContainer,frag,"pdfEditor").addToBackStack("pdfEditor").commitAllowingStateLoss()
-        }
-    }
+        setContent {
 
-    override fun onBackPressed() {
-        supportFragmentManager.let { sf ->
+            val navController = rememberNavController()
 
-            if(sf.getBackStackEntryAt(sf.backStackEntryCount-1).name == "home"){
+            NavHost(
+                navController = navController,
+                startDestination = Routes.welcomeScreen,
+            ) {
 
-                val f =sf.findFragmentByTag(sf.getBackStackEntryAt(sf.backStackEntryCount-1).name) as HomeFragment?
+                composable(
+                    route = Routes.welcomeScreen
+                ) {
 
-                if(f?.drawerLayout?.isDrawerOpen(f.drawer!!) == true){
-                    f.drawerLayout?.closeDrawer(GravityCompat.START)
+                    WelcomeScreen(
+                        onComplete = {
+                            navController.popBackStack()
+                            navController.navigate(Routes.homeScreen)
+                        }
+                    )
+
                 }
-                else{
-                    if(onBackPressedTwice){
-                        finish()
-                    }
-                    else{
-                        Toast.makeText(this,"Press again to exit",Toast.LENGTH_SHORT).show()
-                        onBackPressedTwice = true
-                        Handler().postDelayed({
-                            onBackPressedTwice = false
-                        },2000)
-                    }
+
+                composable(
+                    route = Routes.homeScreen
+                ) {
+
+                    HomeScreen(
+                        onCameraClick = {
+                            navController.navigate(Routes.cameraScreen)
+                        }
+                    )
+
+                }
+
+                composable(
+                    route = Routes.cameraScreen
+                ) {
+
+                    CameraScreen()
+
                 }
 
             }
-            else{
-                super.onBackPressed()
-            }
+
         }
-        }
+
+    }
 
     override fun onDestroy() {
         clearTemporaryLocation(this)
@@ -104,4 +97,4 @@ class LauncherActivity : AppCompatActivity() {
     }
 
 
-    }
+}
