@@ -13,6 +13,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.constraintlayout.compose.ConstraintLayout
 import androidx.constraintlayout.compose.Dimension
@@ -23,6 +24,7 @@ import com.binishmatheww.camera.composables.rememberCameraController
 import com.binishmatheww.camera.utils.CameraProp
 import com.binishmatheww.camera.utils.SmartSize
 import com.binishmatheww.scanner.common.theme.AppTheme
+import com.binishmatheww.scanner.views.utils.temporaryLocation
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalLifecycleComposeApi::class)
@@ -37,6 +39,7 @@ fun CameraScreen() {
                 .background(MaterialTheme.colorScheme.background)
         ) {
 
+            val context = LocalContext.current
 
             val navigationBarHeight = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
             val notificationBarHeight = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
@@ -123,7 +126,15 @@ fun CameraScreen() {
                     cameraController.cameraScope.launch {
 
                         isCaptureButtonEnabled = false
-                        cameraController.captureImage()
+                        cameraController.captureImage{ cameraCharacteristics, combinedCaptureResult ->
+
+                            cameraController.saveCapturedImageAsFile(
+                                characteristics = cameraCharacteristics,
+                                result = combinedCaptureResult,
+                                fileLocation = temporaryLocation(context = context)
+                            )
+
+                        }
                         isCaptureButtonEnabled = true
 
                     }
