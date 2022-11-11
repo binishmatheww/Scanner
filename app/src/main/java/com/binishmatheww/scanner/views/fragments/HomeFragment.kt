@@ -25,7 +25,6 @@ import androidx.recyclerview.widget.RecyclerView
 import com.binishmatheww.scanner.R
 import com.binishmatheww.scanner.views.adapters.FilePickerAdapter
 import com.binishmatheww.scanner.views.listeners.OnFileClickListener
-import com.binishmatheww.scanner.utils.*
 import com.binishmatheww.scanner.views.utils.TYPE_PDF
 import com.binishmatheww.scanner.views.utils.createDocument
 import com.binishmatheww.scanner.views.utils.openEditor
