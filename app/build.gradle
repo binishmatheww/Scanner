@@ -175,7 +175,7 @@ dependencies {
     implementation 'com.madgag.spongycastle:core:1.58.0.0'
 
     // Camera
-    implementation 'com.binishmatheww:camera:0.0.2'
+    implementation 'com.binishmatheww:camera:0.0.3'
 
 
     /**
