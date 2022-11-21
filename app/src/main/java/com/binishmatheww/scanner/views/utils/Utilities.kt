@@ -7,17 +7,22 @@ import android.graphics.ColorMatrix
 import android.graphics.ColorMatrixColorFilter
 import android.hardware.Camera
 import android.net.Uri
-import android.os.Build
-import android.os.Bundle
-import android.os.VibrationEffect
-import android.os.Vibrator
+import android.os.*
 import androidx.activity.result.ActivityResultLauncher
+import androidx.annotation.IdRes
 import androidx.fragment.app.Fragment
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.LifecycleOwner
+import androidx.navigation.NavBackStackEntry
+import androidx.navigation.NavController
+import androidx.navigation.fragment.findNavController
 import com.binishmatheww.scanner.R
 import com.binishmatheww.scanner.views.fragments.PdfEditorFragment
 import com.itextpdf.text.PageSize
 import com.itextpdf.text.Rectangle
 import java.io.File
+import java.io.Serializable
 import java.math.RoundingMode
 import kotlin.math.abs
 import kotlin.math.roundToInt
@@ -57,7 +62,7 @@ fun Fragment.openEditor(uri: Uri) {
     bundle.putString("uri", uri.toString())
     val frag = PdfEditorFragment()
     frag.arguments = bundle
-    requireActivity().supportFragmentManager.beginTransaction().replace(R.id.fContainer, frag, "pdfEditor").addToBackStack("pdfEditor").commitAllowingStateLoss()
+    requireActivity().supportFragmentManager.beginTransaction().replace(R.id.navigationController, frag, "pdfEditor").addToBackStack("pdfEditor").commitAllowingStateLoss()
 }
 
 fun Fragment.openEditor(file: File) {
@@ -65,7 +70,7 @@ fun Fragment.openEditor(file: File) {
     bundle.putString("file", file.absolutePath)
     val frag = PdfEditorFragment()
     frag.arguments = bundle
-    requireActivity().supportFragmentManager.beginTransaction().replace(R.id.fContainer, frag, "pdfEditor").addToBackStack("pdfEditor").commitAllowingStateLoss()
+    requireActivity().supportFragmentManager.beginTransaction().replace(R.id.navigationController, frag, "pdfEditor").addToBackStack("pdfEditor").commitAllowingStateLoss()
 }
 
 fun Fragment.pdfFilesFromStorageLocation() : ArrayList<File> {
@@ -203,30 +208,63 @@ fun calculateMegaPixels(size : Camera.Size) : String {
     return s
 }
 
-fun getOptimalPreviewSize(sizes: List<Camera.Size>, w: Int, h: Int): Camera.Size? {
-    val tolerance = 0.05
-    val targetRatio = w.toDouble() / h
-    var optimalSize: Camera.Size? = null
-    var minDiff = Double.MAX_VALUE
-    for (size in sizes) {
-        val ratio = size.width.toDouble() / size.height
-        if (abs(ratio - targetRatio) > tolerance) {
-            continue
-        }
-        if (abs(size.height - h) < minDiff) {
-            optimalSize = size
-            minDiff = abs(size.height - h).toDouble()
-        }
-    }
-    if (optimalSize == null) {
-        minDiff = Double.MAX_VALUE
-        for (size in sizes) {
-            if (abs(size.height - h) < minDiff) {
-                optimalSize = size
-                minDiff = abs(size.height - h).toDouble()
-            }
-        }
-    }
-    return optimalSize
+inline fun <reified T : Serializable> Bundle.serializable(key: String): T? = when {
+    Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU -> getSerializable(key, T::class.java)
+    else -> @Suppress("DEPRECATION") getSerializable(key) as? T
 }
 
+inline fun <reified T : Serializable> Intent.serializable(key: String): T? = when {
+    Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU -> getSerializableExtra(key, T::class.java)
+    else -> @Suppress("DEPRECATION") getSerializableExtra(key) as? T
+}
+
+fun <T> Fragment.getNavigationResult(key: String = "result") =
+    findNavController().currentBackStackEntry?.savedStateHandle?.get<T>(key)
+
+fun <T> Fragment.setNavigationResult(result: T, key: String = "result") {
+    findNavController().previousBackStackEntry?.savedStateHandle?.set(key, result)
+}
+
+fun <T : Parcelable> NavController.handleResult(
+    lifecycleOwner: LifecycleOwner,
+    @IdRes currentDestinationId: Int,
+    @IdRes childDestinationId: Int,
+    handler: (T) -> Unit
+) {
+    // `getCurrentBackStackEntry` doesn't work in case of recovery from the process death when dialog is opened.
+    val currentEntry = getBackStackEntry(currentDestinationId)
+    val observer = LifecycleEventObserver { _, event ->
+        if (event == Lifecycle.Event.ON_RESUME) {
+            handleResultFromChild(childDestinationId, currentEntry, handler)
+        }
+    }
+    currentEntry.lifecycle.addObserver(observer)
+    lifecycleOwner.lifecycle.addObserver(LifecycleEventObserver { _, event ->
+        if (event == Lifecycle.Event.ON_DESTROY) {
+            currentEntry.lifecycle.removeObserver(observer)
+        }
+    })
+}
+
+private fun <T : Parcelable> handleResultFromChild(
+    @IdRes childDestinationId: Int,
+    currentEntry: NavBackStackEntry,
+    handler: (T) -> Unit
+) {
+    val expectedResultKey = resultName(childDestinationId)
+    if (currentEntry.savedStateHandle.contains(expectedResultKey)) {
+        val result = currentEntry.savedStateHandle.get<T>(expectedResultKey)
+        handler(result!!)
+        currentEntry.savedStateHandle.remove<T>(expectedResultKey)
+    }
+}
+
+fun <T : Parcelable> NavController.finishWithResult(result: T) {
+    val currentDestinationId = currentDestination?.id
+    if (currentDestinationId != null) {
+        previousBackStackEntry?.savedStateHandle?.set(resultName(currentDestinationId), result)
+    }
+    popBackStack()
+}
+
+private fun resultName(resultSourceId: Int) = "result-$resultSourceId"
