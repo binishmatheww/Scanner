@@ -155,7 +155,7 @@ fun CameraScreen(
             ) {
 
                 Text(
-                    text = if(isFlashTorchEnabled) "Off" else "On"
+                    text = if(isFlashTorchEnabled) "Flash is on" else "Flash is off"
                 )
 
             }
@@ -175,7 +175,7 @@ fun CameraScreen(
             ) {
 
                 Text(
-                    text = if(isFilterEnabled) "Off" else "On"
+                    text = if(isFilterEnabled) "Filter is on" else "Filter is off"
                 )
 
             }
