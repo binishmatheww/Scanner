@@ -17,19 +17,25 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.constraintlayout.compose.ConstraintLayout
 import androidx.constraintlayout.compose.Dimension
+import androidx.exifinterface.media.ExifInterface
 import androidx.lifecycle.compose.ExperimentalLifecycleComposeApi
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.binishmatheww.camera.CameraController
 import com.binishmatheww.camera.composables.CameraPreviewLayout
 import com.binishmatheww.camera.composables.rememberCameraController
 import com.binishmatheww.camera.utils.CameraProp
 import com.binishmatheww.camera.utils.SmartSize
+import com.binishmatheww.camera.utils.log
 import com.binishmatheww.scanner.common.theme.AppTheme
 import com.binishmatheww.scanner.views.utils.temporaryLocation
 import kotlinx.coroutines.launch
+import java.io.File
 
 @OptIn(ExperimentalLifecycleComposeApi::class)
 @Composable
-fun CameraScreen() {
+fun CameraScreen(
+    oncCaptureComplete : (List<File>) -> Unit
+) {
 
     AppTheme.ScannerTheme {
 
@@ -41,6 +47,8 @@ fun CameraScreen() {
 
             val context = LocalContext.current
 
+            val images = remember { mutableStateListOf<File>() }
+
             val navigationBarHeight = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
             val notificationBarHeight = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
 
@@ -48,7 +56,8 @@ fun CameraScreen() {
                 cameraPropsConstraint,
                 cameraSizesConstraint,
                 cameraPreviewLayoutConstraint,
-                captureButtonConstraint
+                captureButtonConstraint,
+                nextButtonConstraint,
             ) = createRefs()
 
             val cameraController = rememberCameraController()
@@ -128,11 +137,24 @@ fun CameraScreen() {
                         isCaptureButtonEnabled = false
                         cameraController.captureImage{ cameraCharacteristics, combinedCaptureResult ->
 
-                            cameraController.saveCapturedImageAsFile(
+                            val file = cameraController.saveCapturedImageAsFile(
                                 characteristics = cameraCharacteristics,
                                 result = combinedCaptureResult,
                                 fileLocation = temporaryLocation(context = context)
                             )
+
+                            if(file.exists()){
+
+                                if (file.extension == "jpg") {
+                                    ExifInterface(file.absolutePath).apply {
+                                        setAttribute(ExifInterface.TAG_ORIENTATION, combinedCaptureResult.orientation.toString())
+                                        saveAttributes()
+                                    }
+                                }
+
+                                images.add(file)
+
+                            }
 
                         }
                         isCaptureButtonEnabled = true
@@ -144,6 +166,26 @@ fun CameraScreen() {
 
                 Text(
                     text = "Capture"
+                )
+
+            }
+
+            Button(
+                modifier = Modifier
+                    .constrainAs(nextButtonConstraint) {
+                        linkTo(start = captureButtonConstraint.end, end = parent.end)
+                        bottom.linkTo(parent.bottom, navigationBarHeight.plus(12.dp))
+                    },
+                enabled = isCaptureButtonEnabled,
+                onClick = {
+
+                    oncCaptureComplete.invoke(images)
+
+                }
+            ) {
+
+                Text(
+                    text = "Next"
                 )
 
             }
