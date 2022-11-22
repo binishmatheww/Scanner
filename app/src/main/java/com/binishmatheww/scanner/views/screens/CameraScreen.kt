@@ -82,7 +82,7 @@ fun CameraScreen(
 
             val selectedCameraSize by cameraController.selectedCameraSizeFlow.collectAsStateWithLifecycle()
 
-            var isFlashEnabled by remember { mutableStateOf(false) }
+            var isFlashTorchEnabled by cameraController.isFlashTorchEnabledFlow.collectAsStateWithLifecycle()
 
             var isFilterEnabled by remember { mutableStateOf(false) }
 
