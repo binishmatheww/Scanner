@@ -1,7 +1,9 @@
 package com.binishmatheww.scanner.views.screens
 
+import android.content.pm.PackageManager
 import android.graphics.ImageFormat
 import android.hardware.camera2.CameraCharacteristics
+import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
@@ -56,6 +58,8 @@ fun CameraScreen(
                 cameraPropsConstraint,
                 cameraSizesConstraint,
                 cameraPreviewLayoutConstraint,
+                flashButtonConstraint,
+                filterButtonConstraint,
                 captureButtonConstraint,
                 nextButtonConstraint,
             ) = createRefs()
@@ -77,6 +81,10 @@ fun CameraScreen(
             val availableCameraSizes by cameraController.availableCameraSizesFlow.collectAsStateWithLifecycle()
 
             val selectedCameraSize by cameraController.selectedCameraSizeFlow.collectAsStateWithLifecycle()
+
+            var isFlashEnabled by remember { mutableStateOf(false) }
+
+            var isFilterEnabled by remember { mutableStateOf(false) }
 
             var isCaptureButtonEnabled by remember { mutableStateOf(true) }
 
@@ -122,6 +130,51 @@ fun CameraScreen(
                     }
                 }
             )
+
+            Button(
+                modifier = Modifier
+                    .constrainAs(flashButtonConstraint) {
+                        linkTo(start = parent.start, end = captureButtonConstraint.start)
+                        bottom.linkTo(parent.bottom, navigationBarHeight.plus(12.dp))
+                    },
+                enabled = isCaptureButtonEnabled,
+                onClick = {
+
+                    if (context.packageManager.hasSystemFeature(PackageManager.FEATURE_CAMERA_FLASH)) {
+
+                    }
+                    else {
+                        Toast.makeText(context, "Your phone does not have flashlight support.", Toast.LENGTH_LONG).show()
+                    }
+
+                }
+            ) {
+
+                Text(
+                    text = "Flash"
+                )
+
+            }
+
+            Button(
+                modifier = Modifier
+                    .constrainAs(filterButtonConstraint) {
+                        linkTo(start = parent.start, end = captureButtonConstraint.start)
+                        bottom.linkTo(flashButtonConstraint.bottom, navigationBarHeight.plus(12.dp))
+                    },
+                enabled = isCaptureButtonEnabled,
+                onClick = {
+
+                    isFilterEnabled = !isFilterEnabled
+
+                }
+            ) {
+
+                Text(
+                    text = if(isFilterEnabled) "Off" else "On"
+                )
+
+            }
 
             Button(
                 modifier = Modifier
