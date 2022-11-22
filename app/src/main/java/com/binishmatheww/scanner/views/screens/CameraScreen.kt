@@ -82,7 +82,7 @@ fun CameraScreen(
 
             val selectedCameraSize by cameraController.selectedCameraSizeFlow.collectAsStateWithLifecycle()
 
-            var isFlashTorchEnabled by cameraController.isFlashTorchEnabledFlow.collectAsStateWithLifecycle()
+            val isFlashTorchEnabled by cameraController.isFlashTorchEnabledFlow.collectAsStateWithLifecycle()
 
             var isFilterEnabled by remember { mutableStateOf(false) }
 
@@ -142,6 +142,10 @@ fun CameraScreen(
 
                     if (context.packageManager.hasSystemFeature(PackageManager.FEATURE_CAMERA_FLASH)) {
 
+                        cameraController.cameraScope.launch {
+                            cameraController.toggleFlashTorch()
+                        }
+
                     }
                     else {
                         Toast.makeText(context, "Your phone does not have flashlight support.", Toast.LENGTH_LONG).show()
@@ -151,7 +155,7 @@ fun CameraScreen(
             ) {
 
                 Text(
-                    text = "Flash"
+                    text = if(isFlashTorchEnabled) "Off" else "On"
                 )
 
             }
