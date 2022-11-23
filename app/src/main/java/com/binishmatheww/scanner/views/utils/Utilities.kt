@@ -8,6 +8,7 @@ import android.graphics.ColorMatrixColorFilter
 import android.hardware.Camera
 import android.net.Uri
 import android.os.*
+import android.util.Log
 import androidx.activity.result.ActivityResultLauncher
 import androidx.annotation.IdRes
 import androidx.fragment.app.Fragment
@@ -34,6 +35,25 @@ const val TYPE_PDF = "application/pdf"
 const val TYPE_JPG = "image/jpg"
 const val TYPE_TXT = "text/plain"
 
+
+fun Any.log(
+    message: String?,
+    throwable: Throwable? = null
+) = log(
+    tag = this::class.java.simpleName,
+    message = message,
+    throwable = throwable
+)
+
+fun log(
+    tag : String,
+    message : String?,
+    throwable: Throwable? = null
+) = Log.wtf(
+    tag,
+    message.toString(),
+    throwable
+)
 
 fun createDocument(title: String, TYPE: String, launcher: ActivityResultLauncher<Intent>){
     val intent = Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
