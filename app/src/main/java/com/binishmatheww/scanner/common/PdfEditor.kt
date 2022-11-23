@@ -1,35 +1,85 @@
-package com.binishmatheww.scanner.views.utils
+package com.binishmatheww.scanner.common
 
 import android.content.Context
-import android.graphics.Bitmap
-import android.graphics.BitmapFactory
-import android.graphics.Canvas
-import android.os.AsyncTask
-import android.os.Environment
-import android.os.Process
+import android.graphics.*
+import android.graphics.pdf.PdfRenderer
+import android.os.ParcelFileDescriptor
 import com.binishmatheww.scanner.R
 import com.binishmatheww.scanner.views.listeners.CompressionListener
+import com.binishmatheww.scanner.views.listeners.FilterImageListener
+import com.binishmatheww.scanner.views.utils.storageLocation
+import com.binishmatheww.scanner.views.utils.temporaryLocation
 import com.itextpdf.text.Document
-import com.itextpdf.text.DocumentException
-import com.itextpdf.text.Image
 import com.itextpdf.text.pdf.*
 import com.itextpdf.text.pdf.parser.PdfImageObject
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers.IO
-import kotlinx.coroutines.Dispatchers.Main
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.*
-import java.lang.Exception
 
-class CompressPdf (var context: Context,var pages : ArrayList<File>,outputName : String,var compressionListener: CompressionListener) {
+object PdfEditor {
 
+    suspend fun filterImage(
+        context: Context,
+        key: Float,
+        inputPage: File,
+        filterImageListener: FilterImageListener
+    )  {
 
+        withContext(Dispatchers.IO){
 
-    init {
-        CoroutineScope(IO).launch {
+            val filteredImage = File(
+                temporaryLocation(context), context.getString(R.string.image_prefix) + System.currentTimeMillis() + "_filtered" + context.getString(
+                    R.string.image_extension))
+            val bitmap: Bitmap
             try {
-                var n = 0
+                val cm = ColorMatrix(
+                    floatArrayOf(
+                        key, 0f, 0f, 0f, 0f, 0f,
+                        key, 0f, 0f, 0f, 0f, 0f,
+                        key, 0f, 0f, 0f, 0f, 0f, 1f, 0f
+                    )
+                )
+                val fd =
+                    ParcelFileDescriptor.open(inputPage, ParcelFileDescriptor.MODE_READ_ONLY)
+                val renderer = PdfRenderer(fd)
+                val page = renderer.openPage(0)
+                bitmap = Bitmap.createBitmap(
+                    page.width * 2,
+                    page.height * 2,
+                    Bitmap.Config.ARGB_8888
+                )
+                page.render(bitmap, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
+                val canvas = Canvas(bitmap)
+                val paint = Paint()
+                paint.colorFilter = ColorMatrixColorFilter(cm)
+                canvas.drawBitmap(bitmap, 0f, 0f, paint)
+                filteredImage.createNewFile()
+                val os: OutputStream = BufferedOutputStream(FileOutputStream(filteredImage))
+                bitmap.compress(Bitmap.CompressFormat.PNG, 100, os)
+                os.close()
+            } catch (e: IOException) {
+                e.printStackTrace()
+            }
+
+            withContext(Dispatchers.Main){
+                filterImageListener.postExecute(filteredImage)
+            }
+
+        }
+
+    }
+
+    suspend fun compressPdf (
+        context: Context,
+        pages : ArrayList<File>,
+        outputName : String,
+        compressionListener: CompressionListener
+    ) {
+
+
+        withContext(Dispatchers.IO) {
+            try {
+                var n: Int
                 val outputPath = storageLocation(context).absolutePath.plus(File.separator).plus(outputName).plus("_compressed").plus(context.getString(R.string.pdf_extension))
                 val document = Document()
 
@@ -46,7 +96,7 @@ class CompressPdf (var context: Context,var pages : ArrayList<File>,outputName :
                 var canvas : Canvas?
                 var imgBytes : ByteArrayOutputStream?
 
-                withContext(Main){
+                withContext(Dispatchers.Main){
                     compressionListener.preExecute(pages.size)
                 }
                 for (p in pages.indices) {
@@ -88,7 +138,7 @@ class CompressPdf (var context: Context,var pages : ArrayList<File>,outputName :
                     copy.addDocument(reader)
                     reader.close()
 
-                    withContext(Main){
+                    withContext(Dispatchers.Main){
                         compressionListener.progressUpdate(p)
                     }
                 }
@@ -98,11 +148,11 @@ class CompressPdf (var context: Context,var pages : ArrayList<File>,outputName :
 
             } catch (e: Exception) {
                 e.printStackTrace()
-                withContext(Main){
+                withContext(Dispatchers.Main){
                     compressionListener.postExecute("Could not compress $outputName")
                 }
             }
-            withContext(Main){
+            withContext(Dispatchers.Main){
                 compressionListener.postExecute("Compressed $outputName")
             }
 
@@ -111,6 +161,5 @@ class CompressPdf (var context: Context,var pages : ArrayList<File>,outputName :
 
 
     }
-
 
 }
