@@ -84,6 +84,8 @@ fun CameraScreen(
 
             val isFlashTorchEnabled by cameraController.isFlashTorchEnabledFlow.collectAsStateWithLifecycle()
 
+            val filterKey by remember { mutableStateOf(1.35f) }
+
             var isFilterEnabled by remember { mutableStateOf(false) }
 
             var isCaptureButtonEnabled by remember { mutableStateOf(true) }
