@@ -1,38 +1,31 @@
 package com.binishmatheww.scanner.views.fragments
 
-import android.Manifest.permission.CAMERA
 import android.app.Activity.RESULT_OK
 import android.content.Context
 import android.content.Intent
-import android.content.pm.PackageManager.PERMISSION_GRANTED
 import android.os.Bundle
 import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.Button
 import android.widget.LinearLayout
 import android.widget.Toast
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.ActionBarDrawerToggle
-import androidx.core.content.ContextCompat.checkSelfPermission
-import androidx.documentfile.provider.DocumentFile
+import androidx.compose.ui.platform.ComposeView
 import androidx.drawerlayout.widget.DrawerLayout
 import androidx.fragment.app.Fragment
-import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.navigation.findNavController
 import androidx.recyclerview.widget.RecyclerView
 import com.binishmatheww.scanner.R
 import com.binishmatheww.scanner.views.adapters.FilePickerAdapter
-import com.binishmatheww.scanner.views.listeners.OnFileClickListener
-import com.binishmatheww.scanner.views.utils.TYPE_PDF
-import com.binishmatheww.scanner.views.utils.createDocument
+import com.binishmatheww.scanner.views.screens.HomeScreen
 import com.binishmatheww.scanner.views.utils.openEditor
 import com.binishmatheww.scanner.views.utils.pdfFilesFromStorageLocation
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 import com.google.android.material.navigation.NavigationView
 import java.io.File
-import java.io.FileOutputStream
 
 
 class HomeFragment : Fragment() {
@@ -84,7 +77,7 @@ class HomeFragment : Fragment() {
         }
         cameraPermissionLauncher = registerForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted: Boolean ->
             if (isGranted) {
-                requireActivity().supportFragmentManager.beginTransaction().replace(R.id.fContainer, CameraFragment(), "camera").addToBackStack("camera").commitAllowingStateLoss()
+                requireActivity().supportFragmentManager.beginTransaction().replace(R.id.navigationController, CameraFragment(), "camera").addToBackStack("camera").commitAllowingStateLoss()
             } else {
                 Toast.makeText(requireContext(),"Please enable camera permission",Toast.LENGTH_SHORT).show()
             }
@@ -92,25 +85,21 @@ class HomeFragment : Fragment() {
     }
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
-        // Inflate the layout for this fragment
-        return inflater.inflate(R.layout.fragment_home, container, false)
+
+        return ComposeView(context = layoutInflater.context).apply {
+            setContent {
+                HomeScreen {
+                    activity?.findNavController(R.id.navigationController)?.navigate(R.id.action_homeFragment_to_cameraFragment)
+                }
+            }
+        }
+
     }
 
     override fun onViewCreated(layout: View, savedInstanceState: Bundle?) {
         super.onViewCreated(layout, savedInstanceState)
 
-        cameraActionButton = layout.findViewById(R.id.cameraActionButton)
-        editorActionButton = layout.findViewById(R.id.editorActionButton)
-
-        homeRecyclerView = layout.findViewById(R.id.homeRecyclerView)
-        homeLinearLayout = layout.findViewById(R.id.homeLinearLayout)
-
-        drawerLayout = layout.findViewById(R.id.drawerLayout)
-        drawer = layout.findViewById(R.id.drawer)
-
-        toggle = ActionBarDrawerToggle(requireActivity(),drawerLayout,layout.findViewById(R.id.toolBar),R.string.open,R.string.close)
-
-        drawerLayout?.addDrawerListener(toggle)
+        /*
 
         cameraActionButton.setOnClickListener {
             when (PERMISSION_GRANTED) {
@@ -151,7 +140,7 @@ class HomeFragment : Fragment() {
         val aboutUs : Button = layout.findViewById(R.id.aboutUs)
         aboutUs.setOnClickListener {
             Toast.makeText(requireContext(),"B Scanner version 1.0",Toast.LENGTH_SHORT).show()
-        }
+        }*/
 
 
 
@@ -162,15 +151,15 @@ class HomeFragment : Fragment() {
 
     override fun onResume() {
         super.onResume()
-        toggle.syncState()
+        //toggle.syncState()
 
         files = pdfFilesFromStorageLocation()
         if(files.isNotEmpty()){
-            homeLinearLayout.visibility = View.GONE
-            filePickerAdapter.data(files)
+            //homeLinearLayout.visibility = View.GONE
+            //filePickerAdapter.data(files)
         }
         else{
-            homeLinearLayout.visibility = View.VISIBLE
+           //homeLinearLayout.visibility = View.VISIBLE
         }
 
     }
