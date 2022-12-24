@@ -7,16 +7,57 @@ import android.os.ParcelFileDescriptor
 import com.binishmatheww.scanner.R
 import com.binishmatheww.scanner.views.listeners.CompressionListener
 import com.binishmatheww.scanner.views.listeners.FilterImageListener
+import com.binishmatheww.scanner.views.listeners.ImageToPdfListener
 import com.binishmatheww.scanner.views.utils.storageLocation
 import com.binishmatheww.scanner.views.utils.temporaryLocation
 import com.itextpdf.text.Document
+import com.itextpdf.text.Image
+import com.itextpdf.text.Rectangle
 import com.itextpdf.text.pdf.*
 import com.itextpdf.text.pdf.parser.PdfImageObject
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.*
 
-object PdfEditor {
+class PdfEditor {
+
+    suspend fun convertImageToPdf(
+        imageToBeConverted: ByteArray,
+        outputPath: String,
+        position: Int,
+        pageSize: Rectangle,
+        imageToPdfListener: ImageToPdfListener
+    ){
+
+        withContext(Dispatchers.IO){
+
+            try {
+                val document = Document(pageSize)
+                document.setMargins(10f, 10f, 10f, 10f)
+                PdfWriter.getInstance(document, FileOutputStream(outputPath))
+                document.open()
+                val image = Image.getInstance(imageToBeConverted)
+                val documentWidth = document.pageSize.width
+                val documentHeight = document.pageSize.height
+                image.compressionLevel = 9
+                image.scaleToFit(documentWidth, documentHeight)
+                image.setAbsolutePosition(
+                    (document.pageSize.width - image.scaledWidth) / 2,
+                    (document.pageSize.height - image.scaledHeight) / 2)
+                document.add(image)
+                document.close()
+            }
+            catch (e: Exception) {
+                e.printStackTrace()
+            }
+
+            withContext(Dispatchers.Main){
+                imageToPdfListener.postExecute(File(outputPath), position)
+            }
+
+        }
+
+    }
 
     suspend fun filterImage(
         context: Context,
@@ -27,8 +68,7 @@ object PdfEditor {
 
         withContext(Dispatchers.IO){
 
-            val filteredImage = File(
-                temporaryLocation(context), context.getString(R.string.image_prefix) + System.currentTimeMillis() + "_filtered" + context.getString(
+            val filteredImage = File(temporaryLocation(context), context.getString(R.string.image_prefix) + System.currentTimeMillis() + "_filtered" + context.getString(
                     R.string.image_extension))
             val bitmap: Bitmap
             try {
@@ -71,8 +111,8 @@ object PdfEditor {
 
     suspend fun compressPdf (
         context: Context,
-        pages : ArrayList<File>,
-        outputName : String,
+        pages: ArrayList<File>,
+        outputName: String,
         compressionListener: CompressionListener
     ) {
 
