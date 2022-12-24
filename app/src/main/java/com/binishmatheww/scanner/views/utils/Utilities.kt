@@ -127,24 +127,7 @@ fun temporaryLocation(context: Context) : File {
 
 fun clearTemporaryLocation(context: Context){
     val temporaryLocation = File(context.getExternalFilesDir(null), File.separator + context.getString(R.string.temporary_location))
-    deleteRecursively(temporaryLocation)
-}
-
-fun deleteRecursively(dir: File) {
-    if (dir.isDirectory) {
-        val children = dir.list()
-        children?.let {
-            for (i in children.indices) {
-                val temp = File(dir, it[i])
-                if (temp.isDirectory) {
-                    deleteRecursively(temp)
-                } else {
-                    temp.delete()
-                }
-            }
-        }
-    }
-    dir.delete()
+    temporaryLocation.deleteRecursively()
 }
 
 fun getResizedBitmap(image: Bitmap, maxSize: Int): Bitmap {
