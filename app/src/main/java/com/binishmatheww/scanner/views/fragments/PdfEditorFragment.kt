@@ -117,7 +117,7 @@ class PdfEditorFragment : Fragment() {
 
                     pdfEditor.convertImageToPdf(
                         imageToBeConverted = File(it).readBytes(),
-                        outputPath = it.plus(getString(R.string.page_extension)),
+                        outputFile = File(it.plus(getString(R.string.page_extension))),
                         position = editAtPosition,
                         pageSize = getPageSize("DEFAULT (A4)"),
                         imageToPdfListener = object : ImageToPdfListener {
@@ -141,7 +141,7 @@ class PdfEditorFragment : Fragment() {
                     for(image in images){
                         pdfEditor.convertImageToPdf(
                             imageToBeConverted = image.readBytes(),
-                            outputPath = image.absolutePath.plus(getString(R.string.page_extension)),
+                            outputFile = File(image.absolutePath.plus(getString(R.string.page_extension))),
                             position = 0 ,
                             pageSize = getPageSize("DEFAULT (A4)"),
                             imageToPdfListener = object : ImageToPdfListener {
@@ -183,13 +183,20 @@ class PdfEditorFragment : Fragment() {
                     document.close()
                     val reader = PdfReader(inputPath)
                     for (i in 1..reader.numberOfPages) {
-                        val outputPdfName = getString(R.string.page_prefix) + i + "_" + System.currentTimeMillis() + getString(
-                            R.string.page_extension
-                        )
                         document = Document(reader.getPageSizeWithRotation(i))
-                        val pageFile =
-                            File(temporaryLocation(requireContext()).absolutePath + File.separator.toString() + outputPdfName)
-                        val copy = PdfCopy(document, FileOutputStream(pageFile))
+                        val copy = PdfCopy(
+                            document,
+                            FileOutputStream(
+                                File(temporaryLocation( activity ?: return@setFragmentResultListener ).absolutePath +
+                                        File.separator.toString() +
+                                        getString(R.string.page_prefix) +
+                                        i +
+                                        "_" +
+                                        System.currentTimeMillis() +
+                                        getString(R.string.page_extension)
+                                )
+                            )
+                        )
                         document.open()
                         val page = writer.getImportedPage(reader, i)
                         copy.addPage(page)
@@ -227,13 +234,15 @@ class PdfEditorFragment : Fragment() {
 
                             pdfEditor.convertImageToPdf(
                                 imageToBeConverted = imagesToBeConverted[i].readBytes(),
-                                outputPath = temporaryLocation(requireContext()).absolutePath +
-                                        File.separator +
-                                        getString(R.string.page_prefix) +
-                                        i.toString() +
-                                        "_" +
-                                        System.currentTimeMillis() +
-                                        getString(R.string.page_extension),
+                                outputFile = File(
+                                    temporaryLocation( activity ?: return@launch ).absolutePath +
+                                            File.separator +
+                                            getString(R.string.page_prefix) +
+                                            i.toString() +
+                                            "_" +
+                                            System.currentTimeMillis() +
+                                            getString(R.string.page_extension)
+                                ),
                                 position = i,
                                 pageSize = pageSize,
                                 imageToPdfListener = object : ImageToPdfListener {
@@ -262,11 +271,13 @@ class PdfEditorFragment : Fragment() {
 
                             pdfEditor.convertImageToPdf(
                                 imageToBeConverted = inputStream.readBytes(),
-                                outputPath = temporaryLocation( activity ?: return@launch ).absolutePath +
-                                        File.separator +
-                                        getString(R.string.page_prefix) + "_" +
-                                        System.currentTimeMillis() +
-                                        getString(R.string.page_extension),
+                                outputFile = File(
+                                    temporaryLocation( activity ?: return@launch ).absolutePath +
+                                            File.separator +
+                                            getString(R.string.page_prefix) + "_" +
+                                            System.currentTimeMillis() +
+                                            getString(R.string.page_extension)
+                                ),
                                 position = addImageAtPosition,
                                 pageSize = pageSize,
                                 imageToPdfListener = object : ImageToPdfListener {
@@ -301,12 +312,14 @@ class PdfEditorFragment : Fragment() {
 
                                     pdfEditor.convertImageToPdf(
                                         imageToBeConverted = inputStream.readBytes(),
-                                        outputPath = temporaryLocation( activity ?: return@launch ).absolutePath +
-                                                getString(R.string.page_prefix) +
-                                                i.toString() +
-                                                "_" +
-                                                System.currentTimeMillis() +
-                                                getString(R.string.page_extension),
+                                        outputFile = File(
+                                            temporaryLocation( activity ?: return@launch ).absolutePath +
+                                                    getString(R.string.page_prefix) +
+                                                    i.toString() +
+                                                    "_" +
+                                                    System.currentTimeMillis() +
+                                                    getString(R.string.page_extension)
+                                        ),
                                         i,
                                         pageSize,
                                         object : ImageToPdfListener {
@@ -400,21 +413,31 @@ class PdfEditorFragment : Fragment() {
                 result?.data?.data?.also { uri ->
                     val outputDir = DocumentFile.fromTreeUri(requireContext(),uri)
                     outputDir?.let {
-                        PdfToImage(requireContext(),timeStamp,outputDir, pages,
-                            object : PdfToImageListener {
-                                override fun preExecute(count: Int) {
-                                    progressDialog("converting pdf to images",count)
-                                }
 
-                                override fun progressUpdate(progress: Int) {
-                                    progressLiveData.value = progress
-                                }
+                        lifecycleScope.launch {
 
-                                override fun postExecute(result: String) {
-                                    dialog?.dismiss()
-                                    Toast.makeText(requireContext(), result, Toast.LENGTH_SHORT).show()
-                                }
-                            })
+                            pdfEditor.convertPdfToImage(
+                                context = activity ?: return@launch,
+                                name = timeStamp,
+                                outputDir = outputDir,
+                                pages = pages,
+                                listener = object : PdfToImageListener {
+                                    override fun preExecute(count: Int) {
+                                        progressDialog("converting pdf to images",count)
+                                    }
+
+                                    override fun progressUpdate(progress: Int) {
+                                        progressLiveData.value = progress
+                                    }
+
+                                    override fun postExecute(result: String) {
+                                        dialog?.dismiss()
+                                        Toast.makeText(requireContext(), result, Toast.LENGTH_SHORT).show()
+                                    }
+                                })
+
+                        }
+
                     }
                 }
 
@@ -440,13 +463,15 @@ class PdfEditorFragment : Fragment() {
 
                     pdfEditor.convertImageToPdf(
                         imageToBeConverted = image.readBytes(),
-                        outputPath = temporaryLocation(context ?: return@launch).absolutePath +
-                                File.separator +
-                                getString(R.string.page_prefix) +
-                                image.nameWithoutExtension +
-                                "_" +
-                                System.currentTimeMillis()
-                                + getString(R.string.page_extension),
+                        outputFile = File(
+                            temporaryLocation(context ?: return@launch).absolutePath +
+                                    File.separator +
+                                    getString(R.string.page_prefix) +
+                                    image.nameWithoutExtension +
+                                    "_" +
+                                    System.currentTimeMillis()
+                                    + getString(R.string.page_extension)
+                        ),
                         position = 0,
                         pageSize = pageSize,
                         imageToPdfListener = object : ImageToPdfListener {
@@ -559,24 +584,27 @@ class PdfEditorFragment : Fragment() {
     // Function to export a pdf file
     private fun exportPdf(toExport: ArrayList<File>) {
 
-        MergePdf(
-            context = context ?: return,
-            pages = toExport,
-            outputName = timeStamp,
-            mergePdfListener = object : MergePdfListener {
-                override fun onPreExecute(count: Int) {
-                    progressDialog("Exporting", count)
-                }
+        lifecycleScope.launch {
 
-                override fun onProgressUpdate(progress: Int) {
-                    progressLiveData.value = progress
-                }
+            pdfEditor.mergePdf(
+                pages = toExport,
+                outputFile = File(storageLocation( activity ?: return@launch ).absolutePath.plus(File.separator).plus(timeStamp).plus(activity?.getString(R.string.pdf_extension))),
+                mergePdfListener = object : MergePdfListener {
+                    override fun onPreExecute(count: Int) {
+                        progressDialog("Exporting", count)
+                    }
 
-                override fun onPostExecute(result: String, outputPath: String) {
-                    dialog?.dismiss()
-                    Toast.makeText(context ?: return, result, Toast.LENGTH_SHORT).show()
-                }
-        })
+                    override fun onProgressUpdate(progress: Int) {
+                        progressLiveData.value = progress
+                    }
+
+                    override fun onPostExecute(result: String, outputPath: String) {
+                        dialog?.dismiss()
+                        Toast.makeText(context ?: return, result, Toast.LENGTH_SHORT).show()
+                    }
+                })
+
+        }
 
     }
 
@@ -635,9 +663,14 @@ class PdfEditorFragment : Fragment() {
         lifecycleScope.launch {
 
             pdfEditor.compressPdf(
-                context = context ?: return@launch,
                 pages = pages,
-                outputName = timeStamp,
+                outputFile = File(
+                    storageLocation( activity ?: return@launch ).absolutePath
+                        .plus(File.separator)
+                        .plus(timeStamp)
+                        .plus("_compressed")
+                        .plus(context?.getString(R.string.pdf_extension))
+                ),
                 compressionListener = object : CompressionListener {
                     override fun preExecute(count: Int) {
                         progressDialog("Compressing",count)
@@ -666,27 +699,38 @@ class PdfEditorFragment : Fragment() {
                 dialog?.dismiss()
                 val inputPassword = result.toString()
                 if (inputPassword.isNotEmpty()) {
-                    EncryptPdf(
-                        context = context ?: return,
-                        pages = pages,
-                        outputName = timeStamp,
-                        inputPassword = inputPassword,
-                        masterPassword = masterPassWord,
-                        encryptPdfListener = object : EncryptPdfListener {
-                            override fun onPreExecute(count: Int) {
-                                progressDialog("Encrypting", count)
-                            }
 
-                            override fun onProgressUpdate(progress: Int) {
-                                progressLiveData.value = progress
-                            }
+                    lifecycleScope.launch {
 
-                            override fun onPostExecute(result: String) {
-                                dialog?.dismiss()
-                                Toast.makeText(context ?: return, result, Toast.LENGTH_SHORT).show()
+                        pdfEditor.encryptPdf(
+                            pages = pages,
+                            outputFile = File(
+                                storageLocation( activity ?: return@launch ).absolutePath
+                                    .plus(File.separator)
+                                    .plus(timeStamp)
+                                    .plus("_encrypted")
+                                    .plus(activity?.getString(R.string.pdf_extension))
+                            ),
+                            inputPassword = inputPassword,
+                            masterPassword = masterPassWord,
+                            encryptPdfListener = object : EncryptPdfListener {
+                                override fun onPreExecute(count: Int) {
+                                    progressDialog("Encrypting", count)
+                                }
+
+                                override fun onProgressUpdate(progress: Int) {
+                                    progressLiveData.value = progress
+                                }
+
+                                override fun onPostExecute(result: String) {
+                                    dialog?.dismiss()
+                                    Toast.makeText(context ?: return, result, Toast.LENGTH_SHORT).show()
+                                }
                             }
-                        }
-                    )
+                        )
+
+                    }
+
                 }
             }
 
@@ -750,88 +794,103 @@ class PdfEditorFragment : Fragment() {
 
     private fun pageRenderer(inputPath: String) {
 
-        try {
-            PdfPageExtractor(
-                context = context ?: return,
-                sourcePdfPath = inputPath,
-                extractionListener = object : PdfPageExtractorListener {
+        lifecycleScope.launch {
 
-                    override fun preExecute(count: Int) {
-                        progressDialog("Rendering", count)
-                    }
+            try {
 
-                    override fun progressUpdate(progress: Int) {
-                        progressLiveData.value = progress
-                    }
+                pdfEditor.extractPdfPages(
+                    context = context ?: return@launch,
+                    sourcePdfPath = inputPath,
+                    extractionListener = object : PdfPageExtractorListener {
 
-                    override fun completed(extractedPages: ArrayList<File>) {
-                        dialog?.dismiss()
-                        if (extractedPages.isNotEmpty()) {
-                            if (pages.isNotEmpty()) {
-                                var i = pages.size
-                                var j = 0
-                                while (j < extractedPages.size) {
-                                    pages.add(i, extractedPages[j])
-                                    i++
-                                    j++
+                        override fun preExecute(count: Int) {
+                            progressDialog("Rendering", count)
+                        }
+
+                        override fun progressUpdate(progress: Int) {
+                            progressLiveData.value = progress
+                        }
+
+                        override fun completed(extractedPages: ArrayList<File>) {
+                            dialog?.dismiss()
+                            if (extractedPages.isNotEmpty()) {
+                                if (pages.isNotEmpty()) {
+                                    var i = pages.size
+                                    var j = 0
+                                    while (j < extractedPages.size) {
+                                        pages.add(i, extractedPages[j])
+                                        i++
+                                        j++
+                                    }
+                                } else {
+                                    pages = extractedPages
                                 }
-                            } else {
-                                pages = extractedPages
-                            }
 
-                            renderingAdapter.data(pages)
+                                renderingAdapter.data(pages)
+                            }
                         }
                     }
-                }
-            )
-        }catch (e : BadPasswordException){
-            if(pages.isEmpty()){
-                Toast.makeText(context ?: return,"This pdf is password protected",Toast.LENGTH_SHORT).show()
-                activity?.supportFragmentManager?.popBackStack()
+                )
+
             }
+            catch (e : BadPasswordException){
+                if(pages.isEmpty()){
+                    Toast.makeText(context ?: return@launch,"This pdf is password protected",Toast.LENGTH_SHORT).show()
+                    activity?.supportFragmentManager?.popBackStack()
+                }
+            }
+
         }
+
     }
 
     private fun pageRenderer(inputBytes: ByteArray) {
-        try {
-            PdfPageExtractor(
-                context = context ?: return,
-                bytes = inputBytes,
-                extractionListener = object : PdfPageExtractorListener {
 
-                    override fun preExecute(count: Int) {
-                        progressDialog("Rendering", count)
-                    }
+        lifecycleScope.launch {
 
-                    override fun progressUpdate(progress: Int) {
-                        progressLiveData.value = progress
-                    }
+            try {
+                pdfEditor.extractPdfPages(
+                    context = context ?: return@launch,
+                    bytes = inputBytes,
+                    extractionListener = object : PdfPageExtractorListener {
 
-                    override fun completed(extractedPages: ArrayList<File>) {
-                        if (extractedPages.isNotEmpty()) {
-                            if (pages.isNotEmpty()) {
-                                var i = pages.size
-                                var j = 0
-                                while (j < extractedPages.size) {
-                                    pages.add(i, extractedPages[j])
-                                    i++
-                                    j++
+                        override fun preExecute(count: Int) {
+                            progressDialog("Rendering", count)
+                        }
+
+                        override fun progressUpdate(progress: Int) {
+                            progressLiveData.value = progress
+                        }
+
+                        override fun completed(extractedPages: ArrayList<File>) {
+                            if (extractedPages.isNotEmpty()) {
+                                if (pages.isNotEmpty()) {
+                                    var i = pages.size
+                                    var j = 0
+                                    while (j < extractedPages.size) {
+                                        pages.add(i, extractedPages[j])
+                                        i++
+                                        j++
+                                    }
+                                } else {
+                                    pages = extractedPages
                                 }
-                            } else {
-                                pages = extractedPages
+                                renderingAdapter.data(pages)
+                                dialog?.dismiss()
                             }
-                            renderingAdapter.data(pages)
-                            dialog?.dismiss()
                         }
                     }
-                }
-            )
-        }catch (e : BadPasswordException){
-            if(pages.isEmpty()){
-                Toast.makeText(context ?: return,"This pdf is password protected",Toast.LENGTH_SHORT).show()
-                activity?.supportFragmentManager?.popBackStack()
+                )
             }
+            catch (e : BadPasswordException){
+                if(pages.isEmpty()){
+                    Toast.makeText(context ?: return@launch,"This pdf is password protected",Toast.LENGTH_SHORT).show()
+                    activity?.supportFragmentManager?.popBackStack()
+                }
+            }
+
         }
+
     }
 
     @Deprecated("Deprecated in Java")
@@ -850,12 +909,14 @@ class PdfEditorFragment : Fragment() {
 
                             pdfEditor.convertImageToPdf(
                                 imageToBeConverted = inputStream.readBytes(),
-                                outputPath = temporaryLocation(context ?: return@launch).absolutePath +
-                                        getString(R.string.page_prefix)
-                                        + editAtPosition.toString() +
-                                        "_" +
-                                        System.currentTimeMillis() +
-                                        getString(R.string.page_extension),
+                                outputFile = File(
+                                    temporaryLocation(context ?: return@launch).absolutePath +
+                                            getString(R.string.page_prefix)
+                                            + editAtPosition.toString() +
+                                            "_" +
+                                            System.currentTimeMillis() +
+                                            getString(R.string.page_extension)
+                                ),
                                 position = editAtPosition,
                                 pageSize = pageSize,
                                 imageToPdfListener = object : ImageToPdfListener {
@@ -890,18 +951,29 @@ class PdfEditorFragment : Fragment() {
         }
 
         override fun rotate(position: Int, rotation: Int) {
-            RotatePage(
-                context = context ?: return,
-                page = pages[position],
-                position = position,
-                rotation = rotation,
-                rotatePageListener = object : RotatePageListener {
-                    override fun postExecute(position: Int, rotatedPage: File) {
-                        pages[position].delete()
-                        pages[position] = rotatedPage
-                        renderingAdapter.data(pages)
-                    }
-                })
+
+            lifecycleScope.launch {
+
+                pdfEditor.rotatePdf(
+                    page = pages[position],
+                    position = position,
+                    rotation = rotation,
+                    outputFile = File(
+                        temporaryLocation( activity ?: return@launch).absolutePath +
+                            System.currentTimeMillis() +
+                            "_rotated" +
+                            activity?.getString(R.string.page_extension)
+                    ),
+                    rotatePageListener = object : RotatePageListener {
+                        override fun postExecute(position: Int, rotatedPage: File) {
+                            pages[position].delete()
+                            pages[position] = rotatedPage
+                            renderingAdapter.data(pages)
+                        }
+                    })
+
+            }
+
         }
 
         override fun crop(position: Int) {
@@ -959,15 +1031,21 @@ class PdfEditorFragment : Fragment() {
             lifecycleScope.launch {
 
                 pdfEditor.filterImage(
-                    context = context ?: return@launch,
                     key = key,
                     inputPage = pages[position],
+                    filteredImage = File(
+                        temporaryLocation( activity ?: return@launch),
+                        context?.getString(R.string.image_prefix) +
+                                System.currentTimeMillis() +
+                                "_filtered" +
+                                context?.getString(R.string.image_extension)
+                    ),
                     filterImageListener = object : FilterImageListener {
                         override suspend fun postExecute(filteredImage: File) {
 
                             pdfEditor.convertImageToPdf(
                                 imageToBeConverted = filteredImage.readBytes(),
-                                outputPath = filteredImage.absolutePath.plus(R.string.pdf_extension),
+                                outputFile = File(filteredImage.absolutePath.plus(R.string.pdf_extension)),
                                 position = position,
                                 pageSize = getPageSize("DEFAULT (A4)"),
                                 imageToPdfListener = object : ImageToPdfListener {
