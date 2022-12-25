@@ -8,8 +8,8 @@ import android.util.Log
 import androidx.documentfile.provider.DocumentFile
 import com.binishmatheww.scanner.R
 import com.binishmatheww.scanner.views.listeners.*
-import com.binishmatheww.scanner.views.utils.TYPE_JPG
-import com.binishmatheww.scanner.views.utils.temporaryLocation
+import com.binishmatheww.scanner.common.utils.TYPE_JPG
+import com.binishmatheww.scanner.common.utils.temporaryLocation
 import com.itextpdf.text.Document
 import com.itextpdf.text.Image
 import com.itextpdf.text.Rectangle

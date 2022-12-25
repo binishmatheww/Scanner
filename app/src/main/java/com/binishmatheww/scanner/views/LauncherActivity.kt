@@ -4,9 +4,9 @@ import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import com.binishmatheww.scanner.R
-import com.binishmatheww.scanner.views.utils.clearTemporaryLocation
-import com.binishmatheww.scanner.views.utils.storageLocation
-import com.binishmatheww.scanner.views.utils.temporaryLocation
+import com.binishmatheww.scanner.common.utils.clearTemporaryLocation
+import com.binishmatheww.scanner.common.utils.storageLocation
+import com.binishmatheww.scanner.common.utils.temporaryLocation
 import kotlinx.coroutines.launch
 
 

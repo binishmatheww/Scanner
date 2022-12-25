@@ -27,6 +27,7 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.binishmatheww.scanner.R
 import com.binishmatheww.scanner.common.PdfEditor
+import com.binishmatheww.scanner.common.utils.*
 import com.binishmatheww.scanner.views.adapters.PageAdapter
 import com.binishmatheww.scanner.views.fragments.dialogs.EditorExtraDialog
 import com.binishmatheww.scanner.views.fragments.dialogs.EncryptPdfDialog
@@ -187,7 +188,8 @@ class PdfEditorFragment : Fragment() {
                         val copy = PdfCopy(
                             document,
                             FileOutputStream(
-                                File(temporaryLocation( activity ?: return@setFragmentResultListener ).absolutePath +
+                                File(
+                                    temporaryLocation( activity ?: return@setFragmentResultListener ).absolutePath +
                                         File.separator.toString() +
                                         getString(R.string.page_prefix) +
                                         i +

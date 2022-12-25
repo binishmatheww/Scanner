@@ -35,7 +35,7 @@ import com.binishmatheww.camera.utils.CameraProp
 import com.binishmatheww.camera.utils.SmartSize
 import com.binishmatheww.scanner.R
 import com.binishmatheww.scanner.common.theme.AppTheme
-import com.binishmatheww.scanner.views.utils.temporaryLocation
+import com.binishmatheww.scanner.common.utils.temporaryLocation
 import kotlinx.coroutines.launch
 import java.io.File
 import java.io.Serializable

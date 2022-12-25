@@ -20,8 +20,8 @@ import androidx.navigation.findNavController
 import androidx.recyclerview.widget.RecyclerView
 import com.binishmatheww.scanner.R
 import com.binishmatheww.scanner.views.adapters.FilePickerAdapter
-import com.binishmatheww.scanner.views.utils.openEditor
-import com.binishmatheww.scanner.views.utils.pdfFilesFromStorageLocation
+import com.binishmatheww.scanner.common.utils.openEditor
+import com.binishmatheww.scanner.common.utils.pdfFilesFromStorageLocation
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 import com.google.android.material.navigation.NavigationView
 import java.io.File

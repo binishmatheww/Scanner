@@ -17,9 +17,9 @@ import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.recyclerview.widget.RecyclerView
 import com.binishmatheww.scanner.R
 import com.binishmatheww.scanner.views.listeners.PageClickListener
-import com.binishmatheww.scanner.views.utils.getContrastBrightnessFilter
-import com.binishmatheww.scanner.views.utils.getResizedBitmap
-import com.binishmatheww.scanner.views.utils.vibrate
+import com.binishmatheww.scanner.common.utils.getContrastBrightnessFilter
+import com.binishmatheww.scanner.common.utils.getResizedBitmap
+import com.binishmatheww.scanner.common.utils.vibrate
 import com.bumptech.glide.Glide
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers.Default

@@ -15,7 +15,7 @@ import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
 import com.binishmatheww.scanner.R
 import com.binishmatheww.scanner.views.listeners.OnFileClickListener
-import com.binishmatheww.scanner.views.utils.getResizedBitmap
+import com.binishmatheww.scanner.common.utils.getResizedBitmap
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers.IO
 import kotlinx.coroutines.Dispatchers.Main

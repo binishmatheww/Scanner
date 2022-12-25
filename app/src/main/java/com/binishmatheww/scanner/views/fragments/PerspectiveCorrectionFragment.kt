@@ -15,7 +15,7 @@ import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.setFragmentResult
 import com.binishmatheww.scanner.R
-import com.binishmatheww.scanner.views.utils.temporaryLocation
+import com.binishmatheww.scanner.common.utils.temporaryLocation
 import java.io.BufferedOutputStream
 import java.io.File
 import java.io.FileOutputStream

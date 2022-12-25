@@ -1,4 +1,4 @@
-package com.binishmatheww.scanner.views.utils
+package com.binishmatheww.scanner.common.utils
 
 import android.content.Context
 import android.content.Intent
