@@ -8,7 +8,9 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -19,8 +21,10 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.constraintlayout.compose.ConstraintLayout
 import androidx.constraintlayout.compose.Dimension
@@ -29,9 +33,9 @@ import androidx.fragment.app.Fragment
 import androidx.lifecycle.compose.ExperimentalLifecycleComposeApi
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.findNavController
+import coil.compose.rememberAsyncImagePainter
 import com.binishmatheww.camera.composables.CameraPreviewLayout
 import com.binishmatheww.camera.composables.rememberCameraController
-import com.binishmatheww.camera.utils.CameraProp
 import com.binishmatheww.camera.utils.SmartSize
 import com.binishmatheww.scanner.R
 import com.binishmatheww.scanner.common.theme.AppTheme
@@ -100,7 +104,6 @@ class CameraFragment : Fragment() {
                 val notificationBarHeight = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
 
                 val (
-                    cameraPropsConstraint,
                     cameraSizesConstraint,
                     cameraPreviewLayoutConstraint,
                     flashButtonConstraint,
@@ -119,17 +122,13 @@ class CameraFragment : Fragment() {
                     }
                 )
 
-                val availableCameraProps by cameraController.availableCameraPropsFlow.collectAsStateWithLifecycle()
-
-                val selectedCameraProp by cameraController.selectedCameraPropFlow.collectAsStateWithLifecycle()
-
                 val availableCameraSizes by cameraController.availableCameraSizesFlow.collectAsStateWithLifecycle()
 
                 val selectedCameraSize by cameraController.selectedCameraSizeFlow.collectAsStateWithLifecycle()
 
                 val isFlashTorchEnabled by cameraController.isFlashTorchEnabledFlow.collectAsStateWithLifecycle()
 
-                val filterKey by remember { mutableStateOf(1.35f) }
+                //val filterKey by remember { mutableStateOf(1.35f) }
 
                 var isFilterEnabled by remember { mutableStateOf(false) }
 
@@ -145,27 +144,10 @@ class CameraFragment : Fragment() {
                     cameraController = cameraController
                 )
 
-                CameraPropsLayout(
-                    modifier = Modifier
-                        .constrainAs(cameraPropsConstraint){
-                            top.linkTo(parent.top, notificationBarHeight.plus(12.dp))
-                            linkTo(start = parent.start, end = parent.end)
-                        },
-                    availableCameraProps = availableCameraProps,
-                    selectedCameraProp = selectedCameraProp,
-                    onCameraPropSelected = { cameraProp ->
-                        cameraController.cameraScope.launch {
-                            cameraController.selectCamera(cameraProp)
-                            cameraController.selectSize(cameraProp?.outputSizes?.firstOrNull())
-                            cameraController.initialize()
-                        }
-                    }
-                )
-
                 CameraSizesLayout(
                     modifier = Modifier
                         .constrainAs(cameraSizesConstraint){
-                            top.linkTo(cameraPropsConstraint.bottom, 12.dp)
+                            top.linkTo(parent.top, notificationBarHeight)
                             linkTo(start = parent.start, end = parent.end)
                         },
                     availableCameraSizes = availableCameraSizes,
@@ -178,161 +160,137 @@ class CameraFragment : Fragment() {
                     }
                 )
 
-                Button(
-                    modifier = Modifier
-                        .constrainAs(flashButtonConstraint) {
-                            linkTo(start = parent.start, end = captureButtonConstraint.start)
-                            bottom.linkTo(parent.bottom, navigationBarHeight.plus(12.dp))
-                        },
-                    enabled = isCaptureButtonEnabled,
-                    onClick = {
-
-                        if (context.packageManager.hasSystemFeature(PackageManager.FEATURE_CAMERA_FLASH)) {
-
-                            cameraController.cameraScope.launch {
-                                cameraController.toggleFlashTorch()
-                            }
-
-                        }
-                        else {
-                            Toast.makeText(context, "Your phone does not have flashlight support.", Toast.LENGTH_LONG).show()
-                        }
-
-                    }
-                ) {
-
-                    Text(
-                        text = if(isFlashTorchEnabled) "Flash is on" else "Flash is off"
-                    )
-
-                }
-
-                Button(
+                Image(
                     modifier = Modifier
                         .constrainAs(filterButtonConstraint) {
-                            linkTo(start = parent.start, end = captureButtonConstraint.start)
-                            bottom.linkTo(flashButtonConstraint.bottom, navigationBarHeight.plus(12.dp))
+                            linkTo(start = parent.start, end = flashButtonConstraint.start)
+                            bottom.linkTo(parent.bottom, navigationBarHeight.plus(12.dp))
+                        }
+                        .size(60.dp)
+                        .clickable {
+                            isFilterEnabled = !isFilterEnabled
                         },
-                    enabled = isCaptureButtonEnabled,
-                    onClick = {
-
-                        isFilterEnabled = !isFilterEnabled
-
-                    }
-                ) {
-
-                    Text(
-                        text = if(isFilterEnabled) "Filter is on" else "Filter is off"
+                    painter = painterResource(id = R.drawable.filteric),
+                    contentDescription = null,
+                    colorFilter = ColorFilter.tint(
+                        if(isFilterEnabled) MaterialTheme.colorScheme.primary
+                        else MaterialTheme.colorScheme.secondary
                     )
+                )
 
-                }
+                Image(
+                    modifier = Modifier
+                        .constrainAs(flashButtonConstraint) {
+                            linkTo(start = filterButtonConstraint.end, end = captureButtonConstraint.start)
+                            bottom.linkTo(parent.bottom, navigationBarHeight.plus(12.dp))
+                        }
+                        .size(60.dp)
+                        .clickable {
 
-                Button(
+                            if(!isCaptureButtonEnabled) return@clickable
+
+                            if (context.packageManager.hasSystemFeature(PackageManager.FEATURE_CAMERA_FLASH)) {
+
+                                cameraController.cameraScope.launch {
+                                    cameraController.toggleFlashTorch()
+                                }
+
+                            }
+                            else {
+                                Toast
+                                    .makeText(
+                                        context,
+                                        "Your phone does not have a flashlight",
+                                        Toast.LENGTH_LONG
+                                    )
+                                    .show()
+                            }
+
+                        },
+                    painter = painterResource(id = R.drawable.flashic),
+                    contentDescription = null,
+                    colorFilter = ColorFilter.tint(
+                        if(isFlashTorchEnabled) MaterialTheme.colorScheme.primary
+                        else MaterialTheme.colorScheme.secondary
+                    )
+                )
+
+                Image(
                     modifier = Modifier
                         .constrainAs(captureButtonConstraint) {
                             linkTo(start = parent.start, end = parent.end)
                             bottom.linkTo(parent.bottom, navigationBarHeight.plus(12.dp))
-                        },
-                    enabled = isCaptureButtonEnabled,
-                    onClick = {
+                        }
+                        .size(60.dp)
+                        .clickable {
 
-                        cameraController.cameraScope.launch {
+                            if (!isCaptureButtonEnabled) return@clickable
 
-                            isCaptureButtonEnabled = false
-                            cameraController.captureImage{ cameraCharacteristics, combinedCaptureResult ->
+                            cameraController.cameraScope.launch {
 
-                                val file = cameraController.saveCapturedImageAsFile(
-                                    characteristics = cameraCharacteristics,
-                                    result = combinedCaptureResult,
-                                    fileLocation = temporaryLocation(context = context)
-                                )
+                                isCaptureButtonEnabled = false
+                                cameraController.captureImage{ cameraCharacteristics, combinedCaptureResult ->
 
-                                if(file.exists()){
+                                    val file = cameraController.saveCapturedImageAsFile(
+                                        characteristics = cameraCharacteristics,
+                                        result = combinedCaptureResult,
+                                        fileLocation = temporaryLocation(context = context)
+                                    )
 
-                                    if (file.extension == "jpg") {
-                                        ExifInterface(file.absolutePath).apply {
-                                            setAttribute(ExifInterface.TAG_ORIENTATION, combinedCaptureResult.orientation.toString())
-                                            saveAttributes()
+                                    if(file.exists()){
+
+                                        if (file.extension == "jpg") {
+                                            ExifInterface(file.absolutePath).apply {
+                                                setAttribute(
+                                                    ExifInterface.TAG_ORIENTATION,
+                                                    combinedCaptureResult.orientation.toString()
+                                                )
+                                                saveAttributes()
+                                            }
                                         }
+
+                                        images.add(file)
+
                                     }
 
-                                    images.add(file)
-
                                 }
+                                isCaptureButtonEnabled = true
 
                             }
-                            isCaptureButtonEnabled = true
 
-                        }
-
-                    }
-                ) {
-
-                    Text(
-                        text = "Capture"
+                        },
+                    painter = painterResource(id = R.drawable.cameraic),
+                    contentDescription = null,
+                    colorFilter = ColorFilter.tint(
+                        if(isCaptureButtonEnabled) MaterialTheme.colorScheme.secondary
+                        else MaterialTheme.colorScheme.primary
                     )
+                )
 
-                }
-
-                Button(
+                Image(
                     modifier = Modifier
                         .constrainAs(nextButtonConstraint) {
                             linkTo(start = captureButtonConstraint.end, end = parent.end)
                             bottom.linkTo(parent.bottom, navigationBarHeight.plus(12.dp))
+                        }
+                        .size(60.dp)
+                        .clickable {
+                            oncCaptureComplete.invoke(images)
+                            if(isFlashTorchEnabled){
+                                cameraController.cameraScope.launch {
+                                    cameraController.toggleFlashTorch()
+                                }
+                            }
                         },
-                    enabled = isCaptureButtonEnabled,
-                    onClick = {
-
-                        oncCaptureComplete.invoke(images)
-
-                    }
-                ) {
-
-                    Text(
-                        text = "Next"
+                    painter = painterResource(id = R.drawable.nextic),
+                    contentDescription = null,
+                    colorFilter = ColorFilter.tint(
+                        if(images.isEmpty()) MaterialTheme.colorScheme.secondary
+                        else MaterialTheme.colorScheme.primary
                     )
+                )
 
-                }
 
-
-            }
-
-        }
-
-    }
-
-    @Composable
-    fun CameraPropsLayout(
-        modifier: Modifier,
-        availableCameraProps : List<CameraProp>,
-        selectedCameraProp : CameraProp?,
-        onCameraPropSelected : (CameraProp?) -> Unit
-    ){
-
-        LazyRow(
-            modifier = modifier,
-        ){
-
-            items(
-                items = availableCameraProps,
-            ){ cameraProp ->
-
-                Button(
-                    modifier = Modifier
-                        .height(32.dp)
-                        .padding(
-                            horizontal = 8.dp
-                        ),
-                    onClick = {
-                        onCameraPropSelected.invoke(cameraProp)
-                    },
-                    colors = ButtonDefaults.buttonColors(
-                        contentColor = Color.Black,
-                        backgroundColor = if(cameraProp == selectedCameraProp) Color.Green else Color.Gray
-                    )
-                ) {
-                    Text(text = cameraProp.formatName)
-                }
             }
 
         }
@@ -366,7 +324,8 @@ class CameraFragment : Fragment() {
                     },
                     colors = ButtonDefaults.buttonColors(
                         contentColor = Color.Black,
-                        backgroundColor = if(cameraSize == selectedCameraSize) Color.Green else Color.Gray
+                        backgroundColor = if(cameraSize == selectedCameraSize) MaterialTheme.colorScheme.primary
+                        else MaterialTheme.colorScheme.secondary
                     )
                 ) {
                     Text(text = "${cameraSize.size.width} x ${cameraSize.size.height}")
