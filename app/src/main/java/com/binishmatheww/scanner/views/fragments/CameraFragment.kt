@@ -33,7 +33,6 @@ import androidx.fragment.app.Fragment
 import androidx.lifecycle.compose.ExperimentalLifecycleComposeApi
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.findNavController
-import coil.compose.rememberAsyncImagePainter
 import com.binishmatheww.camera.composables.CameraPreviewLayout
 import com.binishmatheww.camera.composables.rememberCameraController
 import com.binishmatheww.camera.utils.SmartSize
@@ -54,7 +53,7 @@ class CameraFragment : Fragment() {
                 CameraScreen{ images ->
 
                     if (images.isEmpty()) {
-                        Toast.makeText(requireContext(), "No images taken", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(activity ?: return@CameraScreen, "No images taken", Toast.LENGTH_SHORT).show()
                     }
                     else {
 
