@@ -10,7 +10,9 @@
         android:label="fragment_welcome_screen" >
         <action
             android:id="@+id/action_welcomeScreenFragment_to_homeFragment"
-            app:destination="@id/homeFragment" />
+            app:destination="@id/homeFragment"
+            app:popUpTo="@+id/welcomeScreenFragment"
+            app:popUpToInclusive="true"/>
     </fragment>
 
     <fragment
