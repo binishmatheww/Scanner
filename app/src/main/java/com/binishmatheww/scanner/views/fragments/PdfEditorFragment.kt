@@ -34,18 +34,19 @@ import com.binishmatheww.scanner.views.fragments.dialogs.EncryptPdfDialog
 import com.binishmatheww.scanner.views.fragments.dialogs.ProgressDialog
 import com.binishmatheww.scanner.views.fragments.dialogs.SplitPdfDialog
 import com.binishmatheww.scanner.views.listeners.*
-import com.binishmatheww.scanner.views.utils.*
 import com.google.android.material.floatingactionbutton.FloatingActionButton
-import com.itextpdf.text.*
+import com.itextpdf.text.Document
+import com.itextpdf.text.Element
+import com.itextpdf.text.PageSize
+import com.itextpdf.text.Paragraph
 import com.itextpdf.text.exceptions.BadPasswordException
 import com.itextpdf.text.pdf.PdfCopy
 import com.itextpdf.text.pdf.PdfReader
 import com.itextpdf.text.pdf.PdfWriter
 import com.theartofdev.edmodo.cropper.CropImage
-import kotlinx.coroutines.*
+import kotlinx.coroutines.launch
 import java.io.*
 import java.util.*
-import kotlin.collections.ArrayList
 
 
 class PdfEditorFragment : Fragment() {
