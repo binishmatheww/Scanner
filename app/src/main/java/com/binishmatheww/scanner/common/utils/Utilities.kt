@@ -11,6 +11,8 @@ import android.os.*
 import android.util.Log
 import androidx.activity.result.ActivityResultLauncher
 import androidx.annotation.IdRes
+import androidx.compose.foundation.gestures.animateScrollBy
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
@@ -22,6 +24,8 @@ import com.binishmatheww.scanner.R
 import com.binishmatheww.scanner.views.fragments.PdfEditorFragment
 import com.itextpdf.text.PageSize
 import com.itextpdf.text.Rectangle
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.launch
 import java.io.File
 import java.io.Serializable
 import java.math.RoundingMode
@@ -271,3 +275,27 @@ fun <T : Parcelable> NavController.finishWithResult(result: T) {
 }
 
 private fun resultName(resultSourceId: Int) = "result-$resultSourceId"
+
+fun LazyListState.animateScrollAndCentralizeItem(index: Int, scope: CoroutineScope) {
+    scope.launch {
+
+        this@animateScrollAndCentralizeItem
+            .layoutInfo
+            .visibleItemsInfo
+            .firstOrNull { it.index == index } ?: this@animateScrollAndCentralizeItem.scrollToItem(index)
+
+        val itemInfo = this@animateScrollAndCentralizeItem
+            .layoutInfo
+            .visibleItemsInfo
+            .firstOrNull { it.index == index }
+
+        if (itemInfo != null) {
+            val center = this@animateScrollAndCentralizeItem.layoutInfo.viewportEndOffset / 2
+            val childCenter = itemInfo.offset + itemInfo.size / 2
+            this@animateScrollAndCentralizeItem.animateScrollBy((childCenter - center).toFloat())
+        } else {
+            this@animateScrollAndCentralizeItem.animateScrollToItem(index)
+        }
+
+    }
+}
