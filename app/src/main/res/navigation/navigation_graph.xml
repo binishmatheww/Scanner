@@ -22,6 +22,9 @@
         <action
             android:id="@+id/action_homeFragment_to_cameraFragment"
             app:destination="@id/cameraFragment" />
+        <action
+            android:id="@+id/action_homeFragment_to_pdfEditorFragment"
+            app:destination="@id/pdfEditorFragment" />
     </fragment>
 
     <fragment

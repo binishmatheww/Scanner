@@ -106,9 +106,14 @@ class HomeFragment : Fragment() {
 
         return ComposeView(context = layoutInflater.context).apply {
             setContent {
-                HomeScreen {
-                    activity?.findNavController(R.id.navigationController)?.navigate(R.id.action_homeFragment_to_cameraFragment)
-                }
+                HomeScreen(
+                    onCameraClick =  {
+                        activity?.findNavController(R.id.navigationController)?.navigate(R.id.action_homeFragment_to_cameraFragment)
+                    },
+                    onEditorClick = {
+                        activity?.findNavController(R.id.navigationController)?.navigate(R.id.action_homeFragment_to_pdfEditorFragment)
+                    }
+                )
             }
         }
 
@@ -184,7 +189,8 @@ class HomeFragment : Fragment() {
 
     @Composable
     fun HomeScreen(
-        onCameraClick : () -> Unit
+        onCameraClick : () -> Unit,
+        onEditorClick: () -> Unit
     ) {
 
         AppTheme.ScannerTheme {
@@ -244,7 +250,7 @@ class HomeFragment : Fragment() {
                             .size(66.dp),
                         backgroundColor = MaterialTheme.colorScheme.primary,
                         onClick = {
-
+                                  onEditorClick.invoke()
                         },
                         content = {
                             Icon(
