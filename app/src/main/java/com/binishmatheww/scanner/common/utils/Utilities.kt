@@ -3,8 +3,10 @@ package com.binishmatheww.scanner.common.utils
 import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
+import android.graphics.Canvas
 import android.graphics.ColorMatrix
 import android.graphics.ColorMatrixColorFilter
+import android.graphics.pdf.PdfRenderer
 import android.hardware.Camera
 import android.net.Uri
 import android.os.*
@@ -13,6 +15,8 @@ import androidx.activity.result.ActivityResultLauncher
 import androidx.annotation.IdRes
 import androidx.compose.foundation.gestures.animateScrollBy
 import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
@@ -298,4 +302,32 @@ fun LazyListState.animateScrollAndCentralizeItem(index: Int, scope: CoroutineSco
         }
 
     }
+}
+
+fun File.getPdfPreview() : Bitmap?{
+
+    var bitmap: Bitmap? = null
+
+    try {
+        val renderer: PdfRenderer
+        val fd: ParcelFileDescriptor
+        val file = File(absolutePath)
+        fd = ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_ONLY)
+        renderer = PdfRenderer(fd)
+        val page: PdfRenderer.Page = renderer.openPage(0)
+        bitmap = Bitmap.createBitmap(page.width , page.height , Bitmap.Config.ARGB_8888)
+        val canvas = Canvas(bitmap)
+        canvas.drawColor(Color.White.toArgb())
+        canvas.drawBitmap(bitmap, 0.0f, 0.0f, null)
+        page.render(bitmap, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
+        //bitmap = getResizedBitmap(bitmap, 600)
+        page.close()
+        renderer.close()
+    }
+    catch (e: Exception) {
+        e.printStackTrace()
+    }
+
+    return bitmap
+
 }
