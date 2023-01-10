@@ -323,9 +323,9 @@ class PdfEditorFragment : Fragment() {
                                                     System.currentTimeMillis() +
                                                     getString(R.string.page_extension)
                                         ),
-                                        i,
-                                        pageSize,
-                                        object : ImageToPdfListener {
+                                        position = i,
+                                        pageSize = pageSize,
+                                        imageToPdfListener = object : ImageToPdfListener {
                                             override fun postExecute(
                                                 result: File,
                                                 position: Int
