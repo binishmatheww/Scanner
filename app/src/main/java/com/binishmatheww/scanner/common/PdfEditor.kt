@@ -104,7 +104,7 @@ class PdfEditor {
     }
 
     suspend fun compressPdf (
-        pages: ArrayList<File>,
+        pages: List<File>,
         outputFile: File,
         compressionListener: CompressionListener
     ) = withContext(Dispatchers.IO) {
@@ -191,7 +191,7 @@ class PdfEditor {
     }
 
     suspend fun encryptPdf(
-        pages : ArrayList<File>,
+        pages : List<File>,
         outputFile : File,
         inputPassword : String,
         masterPassword : String,
@@ -230,7 +230,7 @@ class PdfEditor {
     }
 
     suspend fun mergePdf(
-        pages: ArrayList<File>,
+        pages: List<File>,
         outputFile: File,
         mergePdfListener: MergePdfListener
     ) = withContext(Dispatchers.IO){
@@ -340,7 +340,7 @@ class PdfEditor {
         context: Context,
         name : String,
         outputDir : DocumentFile,
-        pages: ArrayList<File>,
+        pages: List<File>,
         listener: PdfToImageListener
     ) = withContext(Dispatchers.IO){
 
