@@ -7,6 +7,7 @@ import android.os.ParcelFileDescriptor
 import android.util.Log
 import androidx.documentfile.provider.DocumentFile
 import com.binishmatheww.scanner.R
+import com.binishmatheww.scanner.common.utils.ExifReader
 import com.binishmatheww.scanner.views.listeners.*
 import com.binishmatheww.scanner.common.utils.TYPE_JPG
 import com.binishmatheww.scanner.common.utils.temporaryLocation
@@ -37,6 +38,7 @@ class PdfEditor {
             PdfWriter.getInstance(document, FileOutputStream(outputFile))
             document.open()
             val image = Image.getInstance(imageToBeConverted)
+            image.setRotationDegrees(360-ExifReader.getOrientation(imageToBeConverted))
             val documentWidth = document.pageSize.width
             val documentHeight = document.pageSize.height
             image.compressionLevel = 9
