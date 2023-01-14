@@ -10,7 +10,6 @@ import android.net.Uri
 import android.os.Bundle
 import android.os.ParcelFileDescriptor
 import android.provider.MediaStore
-import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -24,25 +23,39 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.Scaffold
+import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.ComposeView
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.constraintlayout.compose.ConstraintLayout
+import androidx.constraintlayout.compose.Dimension
 import androidx.documentfile.provider.DocumentFile
 import androidx.fragment.app.DialogFragment
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.setFragmentResultListener
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.lifecycleScope
+import coil.compose.AsyncImage
+import coil.imageLoader
+import coil.memory.MemoryCache
+import coil.request.ImageRequest
 import com.binishmatheww.scanner.R
 import com.binishmatheww.scanner.common.PdfEditor
 import com.binishmatheww.scanner.common.theme.AppTheme
@@ -61,9 +74,14 @@ import com.itextpdf.text.pdf.PdfCopy
 import com.itextpdf.text.pdf.PdfReader
 import com.itextpdf.text.pdf.PdfWriter
 import com.theartofdev.edmodo.cropper.CropImage
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import java.io.*
 import java.util.*
+import kotlin.math.sqrt
 
 
 class PdfEditorFragment : Fragment() {
@@ -508,73 +526,289 @@ class PdfEditorFragment : Fragment() {
 
         AppTheme.ScannerTheme {
 
+            val context = LocalContext.current
+
+            val pdfEditorScope = rememberCoroutineScope()
+
             var isEditing by remember { mutableStateOf(false) }
 
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize(),
-                verticalArrangement = Arrangement.Center,
-                content = {
-                    itemsIndexed(pages){ index, page ->
-                        PagePreview(
-                            modifier = Modifier
-                                .padding(
-                                    top = if (pages.size > 1 && index == 0) 100.dp else 0.dp,
-                                    bottom = if (pages.size > 1 && index == pages.lastIndex) 100.dp else 0.dp,
-                                )
-                                .fillMaxWidth()
-                                .wrapContentHeight(),
-                            pageFile = page,
-                            isEditing = isEditing,
-                            onClick = {
-                                isEditing = isEditing.not()
-                            }
-                        )
+            val navigationBarHeight = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+
+            val notificationBarHeight = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+
+            LaunchedEffect(
+                key1 = isEditing,
+                block = {
+
+                    if(isEditing){
+                        vibrate(context)
                     }
+
                 }
             )
+
+            Scaffold(
+                modifier = Modifier
+                    .fillMaxSize(),
+                floatingActionButton = {
+
+                    AnimatedVisibility(
+                        visible = navigationBarHeight > 0.dp,
+                        enter = fadeIn(
+                            animationSpec = tween(
+                                durationMillis = 3000
+                            )
+                        ),
+                        exit = fadeOut(
+                            animationSpec = tween(
+                                durationMillis = 3000
+                            )
+                        )
+                    ) {
+
+                        FloatingActionButton(
+                            modifier = Modifier
+                                .size(64.dp)
+                                .offset(
+                                    y = -navigationBarHeight
+                                ),
+                            shape = CircleShape,
+                            containerColor = MaterialTheme.colorScheme.primary,
+                            contentColor = MaterialTheme.colorScheme.onPrimary,
+                            onClick = {
+                                editorExtraDialog()
+                            }
+                        ){
+                            Icon(
+                                modifier = Modifier
+                                    .size(60.dp),
+                                painter = painterResource(id = R.drawable.settingsic),
+                                contentDescription = ""
+                            )
+                        }
+
+                    }
+
+                }
+            ) { paddingValues ->
+
+                val pagePreviewState = rememberLazyListState()
+
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(
+                            top = paddingValues.calculateTopPadding(),
+                            bottom = paddingValues.calculateBottomPadding(),
+                            start = paddingValues.calculateStartPadding(LayoutDirection.Ltr),
+                            end = paddingValues.calculateEndPadding(LayoutDirection.Ltr),
+                        ),
+                    verticalArrangement = Arrangement.Center,
+                    state = pagePreviewState,
+                    content = {
+                        itemsIndexed(
+                            items = pages,
+                            key = { index, _ ->
+                                pages[index].absolutePath
+                            }
+                        ){ pageIndex, page ->
+                            PagePreview(
+                                modifier = Modifier
+                                    .padding(
+                                        top = if (pages.size > 1 && pageIndex == 0) notificationBarHeight else 4.dp,
+                                        bottom = if (pages.size > 1 && pageIndex == pages.lastIndex) navigationBarHeight else 4.dp,
+                                    )
+                                    .fillMaxWidth()
+                                    .wrapContentHeight(),
+                                pageFile = page,
+                                index = pageIndex,
+                                isEditing = isEditing,
+                                onLongClick = {
+                                    isEditing = isEditing.not()
+                                },
+                                onClick = {
+
+                                },
+                                onPageUp = { position ->
+
+                                    if (position > 0) {
+                                        val f: File = pages[position - 1]
+                                        pages[position - 1] = pages[position]
+                                        pages[position] = f
+                                        pdfEditorScope.launch {
+                                            pagePreviewState.animateScrollToItem(position-1)
+                                        }
+                                    }
+
+                                },
+                                onPageDown = { position ->
+
+                                    if (position < pages.lastIndex) {
+                                        val f: File = pages[position]
+                                        pages[position] = pages[position + 1]
+                                        pages[position + 1] = f
+                                    }
+
+                                }
+                            )
+
+                        }
+                    }
+                )
+
+            }
 
         }
 
     }
 
+    @OptIn(ExperimentalFoundationApi::class)
     @Composable
     private fun PagePreview(
         modifier: Modifier = Modifier,
         pageFile: File,
+        index: Int,
         isEditing: Boolean,
-        onClick: () -> Unit
+        onLongClick: () -> Unit,
+        onClick: () -> Unit,
+        onPageUp:(Int) -> Unit,
+        onPageDown:(Int) -> Unit,
     ){
 
-        val bitmap by remember(key1 = pageFile) { mutableStateOf(pageFile.getPdfPreview()) }
-
-        Box(
+        ConstraintLayout(
             modifier = modifier
         ){
 
-            Image(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .clickable {
-                        onClick.invoke()
-                    },
-                bitmap = bitmap?.asImageBitmap() ?: return,
-                contentDescription = pageFile.name,
-                contentScale = ContentScale.FillWidth
-            )
+            val (
+                previewConstraint,
+                toolsConstraint
+            ) = createRefs()
+
+            val mutex = remember { Mutex() }
+
+            val imageLoader = LocalContext.current.imageLoader
+
+            val imageLoadingScope = rememberCoroutineScope()
+
+            val cacheKey = MemoryCache.Key(pageFile.absolutePath)
+
+            var bitmap by remember { mutableStateOf(imageLoader.memoryCache?.get(cacheKey) as? Bitmap? ) }
+
+            DisposableEffect(pageFile) {
+
+                val job = imageLoadingScope.launch(Dispatchers.IO) {
+
+                    val renderer = PdfRenderer(ParcelFileDescriptor.open(pageFile, ParcelFileDescriptor.MODE_READ_ONLY))
+
+                    mutex.withLock {
+
+                        if (!coroutineContext.isActive) return@launch
+
+                        try {
+                            renderer.openPage(0).use { page ->
+
+                                var destinationBitmap = Bitmap.createBitmap(page.width , page.height , Bitmap.Config.ARGB_8888)
+
+                                val canvas = Canvas(destinationBitmap)
+
+                                canvas.drawColor(Color.White.toArgb())
+
+                                canvas.drawBitmap(destinationBitmap, 0.0f, 0.0f, null)
+
+                                page.render(
+                                    destinationBitmap,
+                                    null,
+                                    null,
+                                    PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY
+                                )
+
+                                //destinationBitmap = getResizedBitmap(destinationBitmap, 720)
+
+                                bitmap = destinationBitmap
+
+                            }
+                        } catch (e: Exception) {
+                            //Just catch and return in case the renderer is being closed
+                            return@launch
+                        }
+
+                    }
+                }
+
+                onDispose {
+                    job.cancel()
+                }
+
+            }
+
+            if (bitmap == null) {
+
+                Box(modifier = Modifier
+                    .constrainAs(previewConstraint) {
+                        start.linkTo(parent.start)
+                        end.linkTo(parent.end)
+                        top.linkTo(parent.top)
+                        bottom.linkTo(parent.bottom)
+                    }
+                    .background(
+                        color = Color.White
+                    )
+                    .aspectRatio(
+                        ratio = 1f / sqrt(2f)
+                    )
+                    .fillMaxWidth())
+
+            }
+            else {
+
+                AsyncImage(
+                    modifier = Modifier
+                        .constrainAs(previewConstraint) {
+                            start.linkTo(parent.start)
+                            end.linkTo(parent.end)
+                            top.linkTo(parent.top)
+                            bottom.linkTo(parent.bottom)
+                        }
+                        .wrapContentHeight()
+                        .fillMaxWidth()
+                        .combinedClickable(
+                            onLongClick = {
+                                onLongClick.invoke()
+                            },
+                            onClick = {
+                                onClick.invoke()
+                            }
+                        ),
+                    model = ImageRequest
+                        .Builder(LocalContext.current)
+                        .memoryCacheKey(cacheKey)
+                        .data(bitmap)
+                        .build(),
+                    contentScale = ContentScale.FillWidth,
+                    contentDescription = "Page ${index+1}"
+                )
+
+            }
 
             AnimatedVisibility(
                 modifier = Modifier
-                    .fillMaxSize(),
+                    .constrainAs(toolsConstraint) {
+                        start.linkTo(parent.start)
+                        end.linkTo(parent.end)
+                        top.linkTo(parent.top)
+                        bottom.linkTo(parent.bottom)
+                        height = Dimension.fillToConstraints
+                        width = Dimension.fillToConstraints
+                    },
                 visible = isEditing,
                 enter = fadeIn(
                     animationSpec = tween(
-                        durationMillis = 2000
+                        durationMillis = 500
                     )
                 ),
                 exit = fadeOut(
                     animationSpec = tween(
-                        durationMillis = 2000
+                        durationMillis = 500
                     )
                 )
             ) {
@@ -585,20 +819,61 @@ class PdfEditorFragment : Fragment() {
                 ) {
 
                     val (
-                        testConstraint
+                        reorderPageConstraint,
+                        pageNumberConstraint
                     ) = createRefs()
+
+                    Column(
+                        modifier = Modifier
+                            .constrainAs(reorderPageConstraint) {
+                                end.linkTo(parent.end, 4.dp)
+                                top.linkTo(parent.top)
+                                bottom.linkTo(parent.bottom)
+                            }
+                            .wrapContentSize(),
+                    ){
+
+                        Image(
+                            modifier = Modifier
+                                .size(96.dp)
+                                .clickable {
+                                    onPageUp.invoke(index)
+                                },
+                            painter = painterResource(id = R.drawable.reordup),
+                            contentDescription = "Up",
+                            colorFilter = ColorFilter.tint(MaterialTheme.colorScheme.primary)
+                        )
+
+                        Image(
+                            modifier = Modifier
+                                .size(96.dp)
+                                .clickable {
+                                    onPageDown.invoke(index)
+                                },
+                            painter = painterResource(id = R.drawable.reorddown),
+                            contentDescription = "Down",
+                            colorFilter = ColorFilter.tint(MaterialTheme.colorScheme.primary)
+                        )
+
+                    }
 
                     Text(
                         modifier = Modifier
-                            .constrainAs(testConstraint){
+                            .constrainAs(pageNumberConstraint) {
                                 start.linkTo(parent.start)
                                 end.linkTo(parent.end)
-                                top.linkTo(parent.top)
-                                bottom.linkTo(parent.bottom)
-                        }.wrapContentSize(),
-                        text = "Test",
-                        color = Color.Blue,
-                        fontSize = 32.sp
+                                bottom.linkTo(parent.bottom, 8.dp)
+                            }
+                            .wrapContentSize(),
+                        text = "Page ${index + 1}",
+                        color = MaterialTheme.colorScheme.primary,
+                        style = MaterialTheme.typography.titleMedium.copy(
+                            shadow = Shadow(
+                                color = Color.Black.copy(alpha = 0.4f),
+                                offset = Offset(x = 1f, y = 2f),
+                                blurRadius = 1f
+                            )
+                        ),
                     )
 
                 }
