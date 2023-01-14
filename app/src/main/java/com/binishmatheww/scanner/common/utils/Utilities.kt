@@ -1,22 +1,25 @@
 package com.binishmatheww.scanner.common.utils
 
+import android.Manifest
+import android.app.Activity
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.graphics.Bitmap
-import android.graphics.Canvas
 import android.graphics.ColorMatrix
 import android.graphics.ColorMatrixColorFilter
-import android.graphics.pdf.PdfRenderer
 import android.hardware.Camera
 import android.net.Uri
 import android.os.*
+import android.provider.MediaStore
+import android.provider.Settings
 import android.util.Log
 import androidx.activity.result.ActivityResultLauncher
 import androidx.annotation.IdRes
 import androidx.compose.foundation.gestures.animateScrollBy
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyListState
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.toArgb
+import androidx.compose.runtime.*
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
@@ -30,10 +33,11 @@ import com.itextpdf.text.PageSize
 import com.itextpdf.text.Rectangle
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
+import java.io.ByteArrayOutputStream
 import java.io.File
+import java.io.FileOutputStream
 import java.io.Serializable
 import java.math.RoundingMode
-import kotlin.math.abs
 import kotlin.math.roundToInt
 
 
@@ -101,7 +105,7 @@ fun Fragment.openEditor(file: File) {
     requireActivity().supportFragmentManager.beginTransaction().replace(R.id.navigationController, frag, "pdfEditor").addToBackStack("pdfEditor").commitAllowingStateLoss()
 }
 
-fun Fragment.pdfFilesFromStorageLocation() : ArrayList<File> {
+fun Fragment.pdfFilesFromStorageLocation(): ArrayList<File> {
     val files = ArrayList<File>()
     val children = storageLocation(requireContext()).listFiles()
     children?.let {
@@ -115,7 +119,72 @@ fun Fragment.pdfFilesFromStorageLocation() : ArrayList<File> {
     return files
 }
 
-fun storageLocation(context: Context) : File{
+fun Context.getPdfFiles(): ArrayList<Uri>{
+
+    val pdfFiles = ArrayList<Uri>()
+
+    if(
+        Build.VERSION.SDK_INT >= Build.VERSION_CODES.R
+        && !Environment.isExternalStorageManager()
+    ){
+            return pdfFiles
+    }
+
+    if(
+        Build.VERSION.SDK_INT < Build.VERSION_CODES.R
+        && Build.VERSION.SDK_INT >= Build.VERSION_CODES.M
+        && checkSelfPermission(Manifest.permission.READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_DENIED
+    ){
+            return pdfFiles
+    }
+
+    val projection = arrayOf(
+        MediaStore.Files.FileColumns._ID,
+        MediaStore.Files.FileColumns.MIME_TYPE,
+        MediaStore.Files.FileColumns.DATE_ADDED,
+        MediaStore.Files.FileColumns.DATE_MODIFIED,
+        MediaStore.Files.FileColumns.DISPLAY_NAME,
+        MediaStore.Files.FileColumns.TITLE,
+        MediaStore.Files.FileColumns.SIZE
+    )
+
+    val selection = MediaStore.Files.FileColumns.MIME_TYPE + " IN ('" + "application/pdf" + "')"
+    val orderBy = MediaStore.Files.FileColumns.SIZE + " DESC"
+
+    applicationContext
+        .contentResolver
+        .query(
+            MediaStore
+                .Files
+                .getContentUri("external"),
+            projection,
+            selection,
+            null,
+            orderBy
+        )?.use { cursor ->
+
+            val idColumn = cursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns._ID)
+
+            log("cursor has ${cursor.count} items.")
+
+            while ( cursor.moveToNext() ){
+
+                pdfFiles.add(
+                    Uri.withAppendedPath(
+                        MediaStore.Files.getContentUri("external"),
+                        cursor.getString(idColumn)
+                    )
+                )
+
+            }
+
+        }
+
+    return pdfFiles
+
+}
+
+fun storageLocation(context: Context): File{
     val storageLocation = File(context.getExternalFilesDir(null), File.separator + context.getString(R.string.storage_location))
     if (!storageLocation.exists()) {
         storageLocation.mkdirs()
@@ -124,7 +193,7 @@ fun storageLocation(context: Context) : File{
     return storageLocation
 }
 
-fun temporaryLocation(context: Context) : File {
+fun temporaryLocation(context: Context): File {
     val temporaryLocation = File(context.getExternalFilesDir(null), File.separator + context.getString(R.string.temporary_location))
     if (!temporaryLocation.exists()) {
         temporaryLocation.mkdirs()
@@ -138,7 +207,55 @@ fun clearTemporaryLocation(context: Context){
     temporaryLocation.deleteRecursively()
 }
 
-fun getResizedBitmap(image: Bitmap, maxSize: Int): Bitmap {
+fun Context.hasExternalStoragePermissions(): Boolean{
+
+    return if(
+        Build.VERSION.SDK_INT >= Build.VERSION_CODES.R
+    ){
+        Environment.isExternalStorageManager()
+    }
+    else if(
+        Build.VERSION.SDK_INT >= Build.VERSION_CODES.M
+    ){
+        checkSelfPermission(Manifest.permission.READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED
+                && checkSelfPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED
+    }
+    else{
+        true
+    }
+
+}
+
+fun Activity.requestExternalStoragePermissions(){
+
+    if(
+        Build.VERSION.SDK_INT >= Build.VERSION_CODES.R
+        && !Environment.isExternalStorageManager()
+    ){
+        startActivity(
+            Intent(
+                Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION
+            )
+        )
+    }
+    else if(
+        Build.VERSION.SDK_INT >= Build.VERSION_CODES.M
+    ){
+        requestPermissions(
+            arrayOf(
+                Manifest.permission.READ_EXTERNAL_STORAGE,
+                Manifest.permission.WRITE_EXTERNAL_STORAGE
+            ),
+            666
+        )
+    }
+
+}
+
+fun getResizedBitmap(
+    image: Bitmap,
+    maxSize: Int
+): Bitmap {
     var width = image.width
     var height = image.height
     val bitmapRatio = width.toFloat() / height.toFloat()
@@ -152,7 +269,9 @@ fun getResizedBitmap(image: Bitmap, maxSize: Int): Bitmap {
     return Bitmap.createScaledBitmap(image, width, height, true)
 }
 
-fun getPageSize(pageSize: String): Rectangle {
+fun getPageSize(
+    pageSize: String
+): Rectangle {
     var size: Rectangle = PageSize.A4
     when (pageSize) {
         "DEFAULT (A4)" -> size = PageSize.A4
@@ -304,30 +423,123 @@ fun LazyListState.animateScrollAndCentralizeItem(index: Int, scope: CoroutineSco
     }
 }
 
-fun File.getPdfPreview() : Bitmap?{
+fun Bitmap.toFile(
+    context: Context,
+    fileName: String
+): File? {
 
-    var bitmap: Bitmap? = null
+    var file: File? = null
 
-    try {
-        val renderer: PdfRenderer
-        val fd: ParcelFileDescriptor
-        val file = File(absolutePath)
-        fd = ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_ONLY)
-        renderer = PdfRenderer(fd)
-        val page: PdfRenderer.Page = renderer.openPage(0)
-        bitmap = Bitmap.createBitmap(page.width , page.height , Bitmap.Config.ARGB_8888)
-        val canvas = Canvas(bitmap)
-        canvas.drawColor(Color.White.toArgb())
-        canvas.drawBitmap(bitmap, 0.0f, 0.0f, null)
-        page.render(bitmap, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
-        //bitmap = getResizedBitmap(bitmap, 600)
-        page.close()
-        renderer.close()
-    }
-    catch (e: Exception) {
+    return try {
+        file = File(storageLocation(context).absolutePath + File.separator + fileName)
+        file.createNewFile()
+
+        val bos = ByteArrayOutputStream()
+        compress(Bitmap.CompressFormat.PNG, 0, bos)
+        val bitmapData = bos.toByteArray()
+
+        val fos = FileOutputStream(file)
+        fos.write(bitmapData)
+        fos.flush()
+        fos.close()
+        file
+    } catch (e: Exception) {
         e.printStackTrace()
+        file // it will return null
     }
-
-    return bitmap
-
 }
+
+//https://stackoverflow.com/questions/69943176/create-a-pdf-viewer-in-jetpack-compose-using-pdfrenderer
+/*@Composable
+fun PdfViewer(
+    modifier: Modifier = Modifier,
+    uri: Uri,
+    verticalArrangement: Arrangement.Vertical = Arrangement.spacedBy(8.dp)
+) {
+    val rendererScope = rememberCoroutineScope()
+    val mutex = remember { Mutex() }
+    val renderer by produceState<PdfRenderer?>(null, uri) {
+        rendererScope.launch(Dispatchers.IO) {
+            val input = ParcelFileDescriptor.open(uri.toFile(), ParcelFileDescriptor.MODE_READ_ONLY)
+            value = PdfRenderer(input)
+        }
+        awaitDispose {
+            val currentRenderer = value
+            rendererScope.launch(Dispatchers.IO) {
+                mutex.withLock {
+                    currentRenderer?.close()
+                }
+            }
+        }
+    }
+    val context = LocalContext.current
+    val imageLoader = LocalContext.current.imageLoader
+    val imageLoadingScope = rememberCoroutineScope()
+    BoxWithConstraints(modifier = modifier.fillMaxWidth()) {
+        val width = with(LocalDensity.current) { maxWidth.toPx() }.toInt()
+        val height = (width * sqrt(2f)).toInt()
+        val pageCount by remember(renderer) { derivedStateOf { renderer?.pageCount ?: 0 } }
+        LazyColumn(
+            verticalArrangement = verticalArrangement
+        ) {
+            items(
+                count = pageCount,
+                key = { index -> "$uri-$index" }
+            ) { index ->
+                val cacheKey = MemoryCache.Key("$uri-$index")
+                var bitmap by remember { mutableStateOf(imageLoader.memoryCache?.get(cacheKey) as? Bitmap? ) }
+                if (bitmap == null) {
+                    DisposableEffect(uri, index) {
+                        val job = imageLoadingScope.launch(Dispatchers.IO) {
+                            val destinationBitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+                            mutex.withLock {
+                                Log.wtf("PdfEditor","Loading PDF $uri - page $index/$pageCount")
+                                if (!coroutineContext.isActive) return@launch
+                                try {
+                                    renderer?.let {
+                                        it.openPage(index).use { page ->
+                                            page.render(
+                                                destinationBitmap,
+                                                null,
+                                                null,
+                                                PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY
+                                            )
+                                        }
+                                    }
+                                } catch (e: Exception) {
+                                    //Just catch and return in case the renderer is being closed
+                                    return@launch
+                                }
+                            }
+                            bitmap = destinationBitmap
+                        }
+                        onDispose {
+                            job.cancel()
+                        }
+                    }
+                    Box(modifier = Modifier
+                        .background(Color.White)
+                        .aspectRatio(1f / sqrt(2f))
+                        .fillMaxWidth())
+                }
+                else {
+                    val request = ImageRequest.Builder(context)
+                        .size(width, height)
+                        .memoryCacheKey(cacheKey)
+                        .data(bitmap)
+                        .build()
+
+                    Image(
+                        modifier = Modifier
+                            .background(Color.White)
+                            .aspectRatio(1f / sqrt(2f))
+                            .fillMaxWidth(),
+                        contentScale = ContentScale.Fit,
+                        painter = rememberAsyncImagePainter(request),
+                        contentDescription = "Page ${index + 1} of $pageCount"
+                    )
+                }
+            }
+        }
+    }
+}*/
