@@ -20,23 +20,26 @@ import androidx.navigation.findNavController
 import androidx.recyclerview.widget.RecyclerView
 import com.binishmatheww.scanner.R
 import com.binishmatheww.scanner.views.adapters.FilePickerAdapter
-import com.binishmatheww.scanner.common.utils.openEditor
-import com.binishmatheww.scanner.common.utils.pdfFilesFromStorageLocation
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 import com.google.android.material.navigation.NavigationView
 import java.io.File
 import android.Manifest
 import android.content.pm.PackageManager
+import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.material.DrawerValue
 import androidx.compose.material.FloatingActionButton
 import androidx.compose.material.ModalDrawer
 import androidx.compose.material.rememberDrawerState
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.*
+import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
@@ -44,6 +47,7 @@ import androidx.compose.ui.unit.dp
 import androidx.constraintlayout.compose.ConstraintLayout
 import androidx.core.content.ContextCompat.checkSelfPermission
 import com.binishmatheww.scanner.common.theme.AppTheme
+import com.binishmatheww.scanner.common.utils.*
 
 
 class HomeFragment : Fragment() {
@@ -54,7 +58,7 @@ class HomeFragment : Fragment() {
     private lateinit var homeLinearLayout: LinearLayout
     private lateinit var filePickerAdapter: FilePickerAdapter
 
-    private var files: ArrayList<File> = ArrayList()
+    private var files = mutableStateListOf<Uri>()
 
     private lateinit var toggle : ActionBarDrawerToggle
 
@@ -107,11 +111,28 @@ class HomeFragment : Fragment() {
         return ComposeView(context = layoutInflater.context).apply {
             setContent {
                 HomeScreen(
+                    pdfFiles = files,
                     onCameraClick =  {
-                        activity?.findNavController(R.id.navigationController)?.navigate(R.id.action_homeFragment_to_cameraFragment)
+
+                        activity
+                            ?.findNavController(R.id.navigationController)
+                            ?.navigate(R.id.action_homeFragment_to_cameraFragment)
+
                     },
                     onEditorClick = {
-                        activity?.findNavController(R.id.navigationController)?.navigate(R.id.action_homeFragment_to_pdfEditorFragment)
+
+                        activity
+                            ?.findNavController(R.id.navigationController)
+                            ?.navigate(
+                                R.id.action_homeFragment_to_pdfEditorFragment,
+                                Bundle().apply {
+                                    putString(
+                                        "file",
+                                        pdfFilesFromStorageLocation().firstOrNull()?.absolutePath
+                                    )
+                                }
+                            )
+
                     }
                 )
             }
@@ -174,21 +195,23 @@ class HomeFragment : Fragment() {
 
     override fun onResume() {
         super.onResume()
-        //toggle.syncState()
 
-        files = pdfFilesFromStorageLocation()
-        if(files.isNotEmpty()){
-            //homeLinearLayout.visibility = View.GONE
-            //filePickerAdapter.data(files)
-        }
-        else{
-           //homeLinearLayout.visibility = View.VISIBLE
+        activity?.apply {
+
+            if(hasExternalStoragePermissions()){
+                files.addAll(getPdfFiles())
+            }
+            else{
+                requestExternalStoragePermissions()
+            }
+
         }
 
     }
 
     @Composable
     fun HomeScreen(
+        pdfFiles: SnapshotStateList<Uri>,
         onCameraClick : () -> Unit,
         onEditorClick: () -> Unit
     ) {
@@ -234,11 +257,31 @@ class HomeFragment : Fragment() {
                     }
 
                     val (
+                        pdfFilePreviewConstraint,
                         editorActionButtonConstraint,
                         cameraActionButtonConstraint,
                     ) = createRefs()
 
-
+                    LazyColumn(
+                        modifier = Modifier.constrainAs(pdfFilePreviewConstraint){
+                            top.linkTo(parent.top)
+                            bottom.linkTo(parent.bottom)
+                            start.linkTo(parent.start)
+                            end.linkTo(parent.end)
+                        }.fillMaxSize(),
+                        content = {
+                            
+                            items(pdfFiles){pdfFile ->
+                                
+                                PdfFilePreview(
+                                    modifier = Modifier.fillMaxSize(),
+                                    pdfFile = pdfFile
+                                )
+                                
+                            }
+                            
+                        }
+                    )
 
                     FloatingActionButton(
                         modifier = Modifier
@@ -299,6 +342,27 @@ class HomeFragment : Fragment() {
 
         }
 
+    }
+    
+    @Composable
+    private fun PdfFilePreview(
+        modifier: Modifier = Modifier,
+        pdfFile: Uri
+    ){
+        
+        Row(
+            modifier = modifier
+        ) {
+            
+            Text(
+                modifier = Modifier
+                    .fillMaxSize(),
+                color = MaterialTheme.colorScheme.primary,
+                text = pdfFile.toString()
+            )
+            
+        }
+        
     }
 
 }
