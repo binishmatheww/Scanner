@@ -28,12 +28,11 @@ import androidx.constraintlayout.compose.ConstraintLayout
 import androidx.constraintlayout.compose.Dimension
 import androidx.exifinterface.media.ExifInterface
 import androidx.fragment.app.Fragment
-import androidx.lifecycle.compose.ExperimentalLifecycleComposeApi
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.findNavController
 import com.binishmatheww.camera.composables.CameraPreviewLayout
 import com.binishmatheww.camera.composables.rememberCameraController
-import com.binishmatheww.camera.utils.SmartSize
+import com.binishmatheww.camera.models.SmartSize
 import com.binishmatheww.scanner.R
 import com.binishmatheww.scanner.common.theme.AppTheme
 import com.binishmatheww.scanner.common.utils.animateScrollAndCentralizeItem
@@ -80,7 +79,6 @@ class CameraFragment : Fragment() {
 
     }
 
-    @OptIn(ExperimentalLifecycleComposeApi::class)
     @Composable
     fun CameraScreen(
         oncCaptureComplete : (List<File>) -> Unit
