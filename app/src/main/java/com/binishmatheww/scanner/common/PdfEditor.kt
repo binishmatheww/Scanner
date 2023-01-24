@@ -305,7 +305,7 @@ class PdfEditor {
             for (i in 1..number) {
                 val document = Document(reader.getPageSizeWithRotation(i))
                 val pageFile = File(
-                    temporaryLocation(context),
+                    context.temporaryLocation(),
                     context.getString(R.string.page_prefix) +
                             i +
                             "_" +

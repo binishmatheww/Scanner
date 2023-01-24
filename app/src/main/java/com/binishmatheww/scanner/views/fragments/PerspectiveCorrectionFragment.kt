@@ -57,7 +57,15 @@ class PerspectiveCorrectionFragment : Fragment() {
         super.onViewCreated(layout, savedInstanceState)
         imageToBeProcessedBitmap = BitmapFactory.decodeFile(arguments?.getString("imageToBeProcessed"))
         imageProcessedBitmap = imageToBeProcessedBitmap.copy(Bitmap.Config.ARGB_8888, true)
-        val resultPath  = temporaryLocation(requireContext()).absolutePath + File.separator + requireContext().getString(R.string.image_prefix) + System.currentTimeMillis() + requireContext().getString(R.string.image_extension)
+        val resultPath  = activity?.run {
+
+            temporaryLocation().absolutePath
+                .plus(File.separator)
+                .plus(getString(R.string.image_prefix))
+                .plus(System.currentTimeMillis())
+                .plus(requireContext().getString(R.string.image_extension))
+
+        } ?: return
 
         pcButton = layout.findViewById(R.id.pcButton)
         pcCButton = layout.findViewById(R.id.pcCButton)

@@ -18,16 +18,16 @@ class LauncherActivity : AppCompatActivity() {
 
         lifecycleScope.launch {
 
-            temporaryLocation(this@LauncherActivity)
+            temporaryLocation()
 
-            storageLocation(this@LauncherActivity)
+            storageLocation()
 
         }
 
     }
 
     override fun onDestroy() {
-        clearTemporaryLocation(this)
+        clearTemporaryLocation()
         super.onDestroy()
     }
 

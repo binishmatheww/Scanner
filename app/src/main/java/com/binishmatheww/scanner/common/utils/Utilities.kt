@@ -27,6 +27,7 @@ import androidx.lifecycle.LifecycleOwner
 import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavController
 import androidx.navigation.fragment.findNavController
+import com.binishmatheww.camera.models.SmartSize
 import com.binishmatheww.scanner.R
 import com.binishmatheww.scanner.views.fragments.PdfEditorFragment
 import com.itextpdf.text.PageSize
@@ -38,6 +39,7 @@ import java.io.File
 import java.io.FileOutputStream
 import java.io.Serializable
 import java.math.RoundingMode
+import kotlin.math.abs
 import kotlin.math.roundToInt
 
 
@@ -107,8 +109,7 @@ fun Fragment.openEditor(file: File) {
 
 fun Fragment.pdfFilesFromStorageLocation(): ArrayList<File> {
     val files = ArrayList<File>()
-    val children = storageLocation(requireContext()).listFiles()
-    children?.let {
+    activity?.storageLocation()?.listFiles()?.let { children ->
         for (child in children){
             if(child.name.endsWith(".pdf")){
                 //Log.wtf("fromStorageLocation",child.name)
@@ -184,8 +185,8 @@ fun Context.getPdfFiles(): ArrayList<Uri>{
 
 }
 
-fun storageLocation(context: Context): File{
-    val storageLocation = File(context.getExternalFilesDir(null), File.separator + context.getString(R.string.storage_location))
+fun Context.storageLocation(): File{
+    val storageLocation = File(getExternalFilesDir(null), File.separator + getString(R.string.storage_location))
     if (!storageLocation.exists()) {
         storageLocation.mkdirs()
     }
@@ -193,8 +194,8 @@ fun storageLocation(context: Context): File{
     return storageLocation
 }
 
-fun temporaryLocation(context: Context): File {
-    val temporaryLocation = File(context.getExternalFilesDir(null), File.separator + context.getString(R.string.temporary_location))
+fun Context.temporaryLocation(): File {
+    val temporaryLocation = File(getExternalFilesDir(null), File.separator + getString(R.string.temporary_location))
     if (!temporaryLocation.exists()) {
         temporaryLocation.mkdirs()
     }
@@ -202,9 +203,8 @@ fun temporaryLocation(context: Context): File {
     return temporaryLocation
 }
 
-fun clearTemporaryLocation(context: Context){
-    val temporaryLocation = File(context.getExternalFilesDir(null), File.separator + context.getString(R.string.temporary_location))
-    temporaryLocation.deleteRecursively()
+fun Context.clearTemporaryLocation(){
+    temporaryLocation().deleteRecursively()
 }
 
 fun Context.hasExternalStoragePermissions(): Boolean{
@@ -423,6 +423,50 @@ fun LazyListState.animateScrollAndCentralizeItem(index: Int, scope: CoroutineSco
     }
 }
 
+fun List<SmartSize>.getOptimalSizeFor(
+    w: Int,
+    h: Int
+): SmartSize? {
+
+    val tolerance = 0.05
+
+    val targetRatio = w.toDouble() / h
+
+    var optimalSize : SmartSize? = null
+
+    var minDiff = Double.MAX_VALUE
+
+    for (size in this) {
+
+        val ratio = size.size.width.toDouble() / size.size.height
+
+        if (abs(ratio - targetRatio) > tolerance) {
+            continue
+        }
+
+        if (abs(size.size.height - h) < minDiff) {
+            optimalSize = size
+            minDiff = abs(size.size.height - h).toDouble()
+        }
+
+    }
+
+    if (optimalSize == null) {
+
+        minDiff = Double.MAX_VALUE
+
+        for (size in this) {
+            if (abs(size.size.height - h) < minDiff) {
+                optimalSize = size
+                minDiff = abs(size.size.height - h).toDouble()
+            }
+        }
+
+    }
+
+    return optimalSize ?: this.firstOrNull()
+}
+
 fun Bitmap.toFile(
     context: Context,
     fileName: String
@@ -431,7 +475,7 @@ fun Bitmap.toFile(
     var file: File? = null
 
     return try {
-        file = File(storageLocation(context).absolutePath + File.separator + fileName)
+        file = File(context.storageLocation().absolutePath + File.separator + fileName)
         file.createNewFile()
 
         val bos = ByteArrayOutputStream()
