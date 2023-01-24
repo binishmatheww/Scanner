@@ -8,24 +8,25 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.material.IconButton
 import androidx.compose.material.Text
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.platform.ComposeView
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.constraintlayout.compose.ConstraintLayout
-import androidx.constraintlayout.compose.Dimension
 import androidx.exifinterface.media.ExifInterface
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -36,6 +37,7 @@ import com.binishmatheww.camera.models.SmartSize
 import com.binishmatheww.scanner.R
 import com.binishmatheww.scanner.common.theme.AppTheme
 import com.binishmatheww.scanner.common.utils.animateScrollAndCentralizeItem
+import com.binishmatheww.scanner.common.utils.getOptimalSizeFor
 import com.binishmatheww.scanner.common.utils.temporaryLocation
 import kotlinx.coroutines.launch
 import java.io.File
@@ -96,7 +98,12 @@ class CameraFragment : Fragment() {
 
                 val images = remember { mutableStateListOf<File>() }
 
+                val density = LocalDensity.current
+
+                val configuration = LocalConfiguration.current
+
                 val navigationBarHeight = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+
                 val notificationBarHeight = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
 
                 val (
@@ -133,10 +140,30 @@ class CameraFragment : Fragment() {
                     modifier = Modifier.constrainAs(cameraPreviewLayoutConstraint) {
                         linkTo(top = parent.top, bottom = parent.bottom)
                         linkTo(start = parent.start, end = parent.end)
-                        width = Dimension.fillToConstraints
-                        height = Dimension.fillToConstraints
                     },
                     cameraController = cameraController
+                )
+
+                LaunchedEffect(
+                    key1 = availableCameraSizes,
+                    block = {
+
+                        with(density){
+
+                            availableCameraSizes.getOptimalSizeFor(
+                                w = configuration.screenWidthDp.dp.toPx().toInt(),
+                                h = configuration.screenHeightDp.dp.toPx().toInt()
+                            )?.let { optimalSize ->
+
+                                cameraController.selectSize(optimalSize)
+                                cameraController.initialize()
+
+                            }
+
+
+                        }
+
+                    }
                 )
 
                 CameraSizesLayout(
@@ -155,115 +182,128 @@ class CameraFragment : Fragment() {
                     }
                 )
 
-                Image(
+                IconButton(
                     modifier = Modifier
                         .constrainAs(flashButtonConstraint) {
                             top.linkTo(parent.top, notificationBarHeight.plus(4.dp))
                             end.linkTo(parent.end, 4.dp)
                         }
-                        .size(48.dp)
-                        .clickable {
+                        .size(48.dp),
+                    onClick = {
 
-                            if (!isCaptureButtonEnabled) return@clickable
+                        if (!isCaptureButtonEnabled) return@IconButton
 
-                            if (context.packageManager.hasSystemFeature(PackageManager.FEATURE_CAMERA_FLASH)) {
+                        if (context.packageManager.hasSystemFeature(PackageManager.FEATURE_CAMERA_FLASH)) {
 
-                                cameraController.cameraScope.launch {
-                                    cameraController.toggleFlashTorch()
-                                }
-
-                            } else {
-                                Toast
-                                    .makeText(
-                                        context,
-                                        "Your phone does not have a flashlight",
-                                        Toast.LENGTH_LONG
-                                    )
-                                    .show()
+                            cameraController.cameraScope.launch {
+                                cameraController.toggleFlashTorch()
                             }
 
-                        },
-                    painter = painterResource(id = R.drawable.flash_button),
-                    contentDescription = null,
-                    colorFilter = ColorFilter.tint(
-                        if(isFlashTorchEnabled) MaterialTheme.colorScheme.primary
-                        else MaterialTheme.colorScheme.secondary
-                    )
+                        }
+                        else {
+                            Toast
+                                .makeText(
+                                    context,
+                                    "Your phone does not have a flashlight",
+                                    Toast.LENGTH_LONG
+                                )
+                                .show()
+                        }
+
+                    },
+                    content = {
+                        Icon(
+                            painter = painterResource(id = R.drawable.flash_button),
+                            contentDescription = null,
+                            tint = if(isFlashTorchEnabled) MaterialTheme.colorScheme.primary
+                            else MaterialTheme.colorScheme.secondary
+                        )
+                    }
                 )
 
-                Image(
+                IconButton(
                     modifier = Modifier
                         .constrainAs(captureButtonConstraint) {
                             linkTo(start = parent.start, end = parent.end)
                             bottom.linkTo(parent.bottom, navigationBarHeight.plus(12.dp))
                         }
-                        .size(60.dp)
-                        .clickable {
+                        .size(60.dp),
+                    onClick = {
 
-                            if (!isCaptureButtonEnabled) return@clickable
+                        if (!isCaptureButtonEnabled) return@IconButton
 
-                            cameraController.cameraScope.launch {
+                        cameraController.cameraScope.launch {
 
-                                isCaptureButtonEnabled = false
-                                cameraController.captureImage { cameraCharacteristics, combinedCaptureResult ->
+                            isCaptureButtonEnabled = false
+                            cameraController.captureImage { cameraCharacteristics, combinedCaptureResult ->
 
-                                    val file = cameraController.saveCapturedImageAsFile(
-                                        characteristics = cameraCharacteristics,
-                                        result = combinedCaptureResult,
-                                        fileLocation = temporaryLocation(context = context)
-                                    )
+                                val file = cameraController.saveCapturedImageAsFile(
+                                    characteristics = cameraCharacteristics,
+                                    result = combinedCaptureResult,
+                                    fileLocation = context.temporaryLocation()
+                                )
 
-                                    if (file.exists()) {
+                                if (file.exists()) {
 
-                                        if (file.extension == "jpg") {
-                                            ExifInterface(file.absolutePath).apply {
-                                                setAttribute(
-                                                    ExifInterface.TAG_ORIENTATION,
-                                                    combinedCaptureResult.orientation.toString()
-                                                )
-                                                saveAttributes()
-                                            }
+                                    if (file.extension == "jpg") {
+                                        ExifInterface(file.absolutePath).apply {
+                                            setAttribute(
+                                                ExifInterface.TAG_ORIENTATION,
+                                                combinedCaptureResult.orientation.toString()
+                                            )
+                                            saveAttributes()
                                         }
-
-                                        images.add(file)
-
                                     }
 
+                                    images.add(file)
+
                                 }
-                                isCaptureButtonEnabled = true
 
                             }
+                            isCaptureButtonEnabled = true
 
-                        },
-                    painter = painterResource(id = R.drawable.camera_button),
-                    contentDescription = null,
-                    colorFilter = ColorFilter.tint(
-                        if(isCaptureButtonEnabled) MaterialTheme.colorScheme.secondary
-                        else MaterialTheme.colorScheme.primary
-                    )
+                        }
+
+                    },
+                    content = {
+
+                        Icon(
+                            painter = painterResource(id = R.drawable.camera_button),
+                            contentDescription = null,
+                            tint = if(isCaptureButtonEnabled) MaterialTheme.colorScheme.secondary
+                            else MaterialTheme.colorScheme.primary
+                        )
+
+                    }
                 )
 
-                Image(
+                IconButton(
                     modifier = Modifier
                         .constrainAs(nextButtonConstraint) {
                             linkTo(start = captureButtonConstraint.end, end = parent.end)
                             bottom.linkTo(parent.bottom, navigationBarHeight.plus(12.dp))
                         }
-                        .size(60.dp)
-                        .clickable {
-                            oncCaptureComplete.invoke(images)
-                            if (isFlashTorchEnabled) {
-                                cameraController.cameraScope.launch {
-                                    cameraController.toggleFlashTorch()
-                                }
+                        .size(60.dp),
+                    onClick = {
+
+                        oncCaptureComplete.invoke(images)
+                        if (isFlashTorchEnabled) {
+                            cameraController.cameraScope.launch {
+                                cameraController.toggleFlashTorch()
                             }
-                        },
-                    painter = painterResource(id = R.drawable.nextic),
-                    contentDescription = null,
-                    colorFilter = ColorFilter.tint(
-                        if(images.isEmpty()) MaterialTheme.colorScheme.secondary
-                        else MaterialTheme.colorScheme.primary
-                    )
+                        }
+
+                    },
+                    content = {
+
+                        Icon(
+                            painter = painterResource(id = R.drawable.nextic),
+                            contentDescription = null,
+                            tint = if(images.isEmpty()) MaterialTheme.colorScheme.secondary
+                            else MaterialTheme.colorScheme.primary
+                        )
+
+                    }
                 )
 
 
@@ -317,8 +357,7 @@ class CameraFragment : Fragment() {
                 if( availableCameraSizes.contains(selectedCameraSize) ){
 
                     cameraSizeLayoutState.animateScrollAndCentralizeItem(
-                        availableCameraSizes.indexOf(
-                            selectedCameraSize),
+                        availableCameraSizes.indexOf(selectedCameraSize),
                         this
                     )
 
