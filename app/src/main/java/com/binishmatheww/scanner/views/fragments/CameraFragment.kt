@@ -141,25 +141,25 @@ class CameraFragment : Fragment() {
                         linkTo(top = parent.top, bottom = parent.bottom)
                         linkTo(start = parent.start, end = parent.end)
                     },
-                    cameraController = cameraController
-                )
+                    cameraController = cameraController,
+                    onInitialized = {
 
-                LaunchedEffect(
-                    key1 = availableCameraSizes,
-                    block = {
+                        cameraController.cameraScope.launch{
 
-                        with(density){
+                            with(density){
 
-                            availableCameraSizes.getOptimalSizeFor(
-                                w = configuration.screenWidthDp.dp.toPx().toInt(),
-                                h = configuration.screenHeightDp.dp.toPx().toInt()
-                            )?.let { optimalSize ->
+                                availableCameraSizes.getOptimalSizeFor(
+                                    w = configuration.screenWidthDp.dp.toPx().toInt(),
+                                    h = configuration.screenHeightDp.dp.toPx().toInt()
+                                )?.let { optimalSize ->
 
-                                cameraController.selectSize(optimalSize)
-                                cameraController.initialize()
+                                    cameraController.selectSize(optimalSize)
+                                    cameraController.initialize()
+
+                                }
+
 
                             }
-
 
                         }
 
