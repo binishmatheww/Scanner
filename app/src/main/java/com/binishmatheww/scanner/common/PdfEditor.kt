@@ -198,7 +198,7 @@ class PdfEditor {
         encryptPdfListener: EncryptPdfListener
     ) = withContext(Dispatchers.IO){
 
-        encryptPdfListener.onPreExecute(pages.size)
+        withContext(Dispatchers.Main){ encryptPdfListener.onPreExecute(pages.size) }
 
         try {
             val document = Document()
@@ -235,7 +235,7 @@ class PdfEditor {
         mergePdfListener: MergePdfListener
     ) = withContext(Dispatchers.IO){
 
-        mergePdfListener.onPreExecute(pages.size)
+        withContext(Dispatchers.Main){ mergePdfListener.onPreExecute(pages.size) }
 
         try {
             val document = Document()
