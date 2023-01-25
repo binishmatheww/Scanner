@@ -125,8 +125,6 @@ class HomeFragment : Fragment() {
 
             val drawerState = rememberDrawerState(DrawerValue.Closed)
 
-            val navigationBarHeight = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
-
             ModalDrawer(
                 drawerState = drawerState,
                 drawerContent = {
@@ -149,6 +147,7 @@ class HomeFragment : Fragment() {
                     modifier = Modifier
                         .fillMaxSize()
                         .background(MaterialTheme.colorScheme.background)
+                        .padding(4.dp)
                 ) {
 
                     var hasCameraPermission by remember { mutableStateOf(checkSelfPermission(context,Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED) }
@@ -166,23 +165,21 @@ class HomeFragment : Fragment() {
                     ) = createRefs()
 
                     LazyColumn(
-                        modifier = Modifier.constrainAs(pdfFilePreviewConstraint){
-                            top.linkTo(parent.top)
-                            bottom.linkTo(parent.bottom)
-                            start.linkTo(parent.start)
-                            end.linkTo(parent.end)
-                        }.fillMaxSize(),
+                        modifier = Modifier
+                            .constrainAs(pdfFilePreviewConstraint) {
+                                top.linkTo(parent.top)
+                                bottom.linkTo(parent.bottom)
+                                start.linkTo(parent.start)
+                                end.linkTo(parent.end)
+                            }
+                            .fillMaxSize(),
                         content = {
                             
                             itemsIndexed(pdfFiles){ index, pdfFile ->
                                 
                                 PdfFilePreview(
                                     modifier = Modifier
-                                        .fillMaxSize()
-                                        .padding(
-                                            top = if(index == 0) navigationBarHeight else 0.dp,
-                                            bottom = if(index == pdfFiles.lastIndex) navigationBarHeight else 0.dp,
-                                        ),
+                                        .fillMaxSize(),
                                     pdfFile = pdfFile,
                                     onFileClick = onFileClick
                                 )
@@ -218,8 +215,8 @@ class HomeFragment : Fragment() {
                     FloatingActionButton(
                         modifier = Modifier
                             .constrainAs(cameraActionButtonConstraint) {
-                                end.linkTo(parent.end, 24.dp)
-                                bottom.linkTo(parent.bottom, navigationBarHeight.plus(24.dp))
+                                end.linkTo(parent.end, 12.dp)
+                                bottom.linkTo(parent.bottom, 24.dp)
                             }
                             .size(66.dp),
                         backgroundColor = MaterialTheme.colorScheme.primary,
