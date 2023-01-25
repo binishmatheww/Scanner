@@ -36,7 +36,6 @@ import com.binishmatheww.scanner.R
 import com.binishmatheww.scanner.common.theme.AppTheme
 import com.binishmatheww.scanner.common.utils.getPdfFiles
 import com.binishmatheww.scanner.common.utils.hasExternalStoragePermissions
-import com.binishmatheww.scanner.common.utils.pdfFilesFromStorageLocation
 import com.binishmatheww.scanner.common.utils.requestExternalStoragePermissions
 import com.binishmatheww.scanner.models.PdfFile
 import com.binishmatheww.scanner.viewmodels.HomeViewModel
@@ -63,15 +62,7 @@ class HomeFragment : Fragment() {
 
                         activity
                             ?.findNavController(R.id.navigationController)
-                            ?.navigate(
-                                R.id.action_homeFragment_to_pdfEditorFragment,
-                                Bundle().apply {
-                                    putString(
-                                        "file",
-                                        pdfFilesFromStorageLocation().firstOrNull()?.absolutePath
-                                    )
-                                }
-                            )
+                            ?.navigate(R.id.action_homeFragment_to_pdfEditorFragment,)
 
                     },
                     onFileClick = { pdfFile ->
