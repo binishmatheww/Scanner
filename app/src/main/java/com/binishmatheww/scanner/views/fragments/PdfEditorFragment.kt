@@ -55,6 +55,7 @@ import androidx.lifecycle.lifecycleScope
 import coil.compose.AsyncImage
 import coil.imageLoader
 import coil.memory.MemoryCache
+import coil.request.CachePolicy
 import coil.request.ImageRequest
 import com.binishmatheww.scanner.R
 import com.binishmatheww.scanner.common.PdfEditor
@@ -81,7 +82,6 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import java.io.*
 import java.util.*
-import kotlin.math.sqrt
 
 
 class PdfEditorFragment : Fragment() {
@@ -532,10 +532,6 @@ class PdfEditorFragment : Fragment() {
 
             var isEditing by remember { mutableStateOf(false) }
 
-            val navigationBarHeight = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
-
-            val notificationBarHeight = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
-
             LaunchedEffect(
                 key1 = isEditing,
                 block = {
@@ -552,41 +548,22 @@ class PdfEditorFragment : Fragment() {
                     .fillMaxSize(),
                 floatingActionButton = {
 
-                    AnimatedVisibility(
-                        visible = navigationBarHeight > 0.dp,
-                        enter = fadeIn(
-                            animationSpec = tween(
-                                durationMillis = 3000
-                            )
-                        ),
-                        exit = fadeOut(
-                            animationSpec = tween(
-                                durationMillis = 3000
-                            )
-                        )
-                    ) {
-
-                        FloatingActionButton(
-                            modifier = Modifier
-                                .size(64.dp)
-                                .offset(
-                                    y = -navigationBarHeight
-                                ),
-                            shape = CircleShape,
-                            containerColor = MaterialTheme.colorScheme.primary,
-                            contentColor = MaterialTheme.colorScheme.onPrimary,
-                            onClick = {
-                                editorExtraDialog()
-                            }
-                        ){
-                            Icon(
-                                modifier = Modifier
-                                    .size(60.dp),
-                                painter = painterResource(id = R.drawable.settingsic),
-                                contentDescription = ""
-                            )
+                    FloatingActionButton(
+                        modifier = Modifier
+                            .size(64.dp),
+                        shape = CircleShape,
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        contentColor = MaterialTheme.colorScheme.onPrimary,
+                        onClick = {
+                            editorExtraDialog()
                         }
-
+                    ){
+                        Icon(
+                            modifier = Modifier
+                                .size(60.dp),
+                            painter = painterResource(id = R.drawable.settingsic),
+                            contentDescription = ""
+                        )
                     }
 
                 }
@@ -602,7 +579,8 @@ class PdfEditorFragment : Fragment() {
                             bottom = paddingValues.calculateBottomPadding(),
                             start = paddingValues.calculateStartPadding(LayoutDirection.Ltr),
                             end = paddingValues.calculateEndPadding(LayoutDirection.Ltr),
-                        ),
+                        )
+                        .background(MaterialTheme.colorScheme.background),
                     verticalArrangement = Arrangement.Center,
                     state = pagePreviewState,
                     content = {
@@ -615,8 +593,8 @@ class PdfEditorFragment : Fragment() {
                             PagePreview(
                                 modifier = Modifier
                                     .padding(
-                                        top = if (pages.size > 1 && pageIndex == 0) notificationBarHeight else 4.dp,
-                                        bottom = if (pages.size > 1 && pageIndex == pages.lastIndex) navigationBarHeight else 4.dp,
+                                        top = 4.dp,
+                                        bottom = 4.dp,
                                     )
                                     .fillMaxWidth()
                                     .wrapContentHeight(),
@@ -679,6 +657,8 @@ class PdfEditorFragment : Fragment() {
             modifier = modifier
         ){
 
+            val context = LocalContext.current
+
             val (
                 previewConstraint,
                 toolsConstraint
@@ -686,15 +666,15 @@ class PdfEditorFragment : Fragment() {
 
             val mutex = remember { Mutex() }
 
-            val imageLoader = LocalContext.current.imageLoader
+            val imageLoader by remember { mutableStateOf(context.imageLoader) }
 
             val imageLoadingScope = rememberCoroutineScope()
 
-            val cacheKey = MemoryCache.Key(pageFile.absolutePath)
+            val cacheKey by remember { mutableStateOf(MemoryCache.Key(pageFile.absolutePath)) }
 
-            var bitmap by remember { mutableStateOf(imageLoader.memoryCache?.get(cacheKey)?.bitmap ) }
+            var bitmap by remember { mutableStateOf( imageLoader.memoryCache?.get(cacheKey)?.bitmap ) }
 
-            DisposableEffect(pageFile) {
+            DisposableEffect(pageFile.absolutePath) {
 
                 val job = imageLoadingScope.launch(Dispatchers.IO) {
 
@@ -724,6 +704,8 @@ class PdfEditorFragment : Fragment() {
 
                                 //destinationBitmap = getResizedBitmap(destinationBitmap, 720)
 
+                                log("Loading bitmap for ${pageFile.name}")
+
                                 bitmap = destinationBitmap
 
                             }
@@ -733,6 +715,7 @@ class PdfEditorFragment : Fragment() {
                         }
 
                     }
+
                 }
 
                 onDispose {
@@ -743,23 +726,45 @@ class PdfEditorFragment : Fragment() {
 
             if (bitmap == null) {
 
-                Box(modifier = Modifier
-                    .constrainAs(previewConstraint) {
-                        start.linkTo(parent.start)
-                        end.linkTo(parent.end)
-                        top.linkTo(parent.top)
-                        bottom.linkTo(parent.bottom)
-                    }
-                    .background(
-                        color = Color.White
-                    )
-                    .aspectRatio(
-                        ratio = 1f / sqrt(2f)
-                    )
-                    .fillMaxWidth())
+                Box(
+                    modifier = Modifier
+                        .constrainAs(previewConstraint) {
+                            start.linkTo(parent.start)
+                            end.linkTo(parent.end)
+                            top.linkTo(parent.top)
+                            bottom.linkTo(parent.bottom)
+                        }
+                        .background(
+                            color = Color.White,
+                        )
+                        .fillMaxWidth()
+                        .height(720.dp)
+                )
 
             }
             else {
+
+                val request by remember {
+                    mutableStateOf(
+                        ImageRequest
+                            .Builder(context)
+                            .crossfade(true)
+                            .memoryCachePolicy(
+                                CachePolicy.ENABLED
+                            )
+                            .memoryCacheKey(cacheKey)
+                            .data(bitmap)
+                            .build()
+                    )
+                }
+
+                DisposableEffect(pageFile.absolutePath) {
+
+                    imageLoader.enqueue(request)
+
+                    onDispose {}
+
+                }
 
                 AsyncImage(
                     modifier = Modifier
@@ -771,6 +776,9 @@ class PdfEditorFragment : Fragment() {
                         }
                         .wrapContentHeight()
                         .fillMaxWidth()
+                        .background(
+                            color = Color.White
+                        )
                         .combinedClickable(
                             onLongClick = {
                                 onLongClick.invoke()
@@ -779,11 +787,7 @@ class PdfEditorFragment : Fragment() {
                                 onClick.invoke()
                             }
                         ),
-                    model = ImageRequest
-                        .Builder(LocalContext.current)
-                        .memoryCacheKey(cacheKey)
-                        .data(bitmap)
-                        .build(),
+                    model = request,
                     contentScale = ContentScale.FillWidth,
                     contentDescription = "Page ${index+1}"
                 )
