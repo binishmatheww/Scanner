@@ -20,6 +20,7 @@ import androidx.compose.foundation.gestures.animateScrollBy
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.runtime.*
+import androidx.core.net.toFile
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
@@ -29,6 +30,7 @@ import androidx.navigation.NavController
 import androidx.navigation.fragment.findNavController
 import com.binishmatheww.camera.models.SmartSize
 import com.binishmatheww.scanner.R
+import com.binishmatheww.scanner.models.PdfFile
 import com.binishmatheww.scanner.views.fragments.PdfEditorFragment
 import com.itextpdf.text.PageSize
 import com.itextpdf.text.Rectangle
@@ -120,9 +122,9 @@ fun Fragment.pdfFilesFromStorageLocation(): ArrayList<File> {
     return files
 }
 
-fun Context.getPdfFiles(): ArrayList<Uri>{
+fun Context.getPdfFiles(): ArrayList<PdfFile>{
 
-    val pdfFiles = ArrayList<Uri>()
+    val pdfFiles = ArrayList<PdfFile>()
 
     if(
         Build.VERSION.SDK_INT >= Build.VERSION_CODES.R
@@ -166,14 +168,22 @@ fun Context.getPdfFiles(): ArrayList<Uri>{
 
             val idColumn = cursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns._ID)
 
+            val displayNameColumn = cursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns.DISPLAY_NAME)
+
             log("cursor has ${cursor.count} items.")
 
             while ( cursor.moveToNext() ){
 
+                val uri = Uri.withAppendedPath(
+                    MediaStore.Files.getContentUri("external"),
+                    cursor.getString(idColumn)
+                )
+
                 pdfFiles.add(
-                    Uri.withAppendedPath(
-                        MediaStore.Files.getContentUri("external"),
-                        cursor.getString(idColumn)
+                    PdfFile(
+                        uri = uri,
+                        displayName = cursor.getString(displayNameColumn),
+                        file = if(uri.scheme == "file") uri.toFile() else null
                     )
                 )
 
