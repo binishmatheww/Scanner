@@ -7,9 +7,11 @@ import com.binishmatheww.scanner.R
 import com.binishmatheww.scanner.common.utils.clearTemporaryLocation
 import com.binishmatheww.scanner.common.utils.storageLocation
 import com.binishmatheww.scanner.common.utils.temporaryLocation
+import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
 
 
+@AndroidEntryPoint
 class LauncherActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {

@@ -5,7 +5,9 @@ import coil.ImageLoader
 import coil.ImageLoaderFactory
 import coil.disk.DiskCache
 import coil.memory.MemoryCache
+import dagger.hilt.android.HiltAndroidApp
 
+@HiltAndroidApp
 class Scanner : Application(), ImageLoaderFactory {
 
     override fun newImageLoader(): ImageLoader {
