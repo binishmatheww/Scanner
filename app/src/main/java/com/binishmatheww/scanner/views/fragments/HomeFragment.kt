@@ -39,8 +39,9 @@ import com.binishmatheww.scanner.common.utils.hasExternalStoragePermissions
 import com.binishmatheww.scanner.common.utils.requestExternalStoragePermissions
 import com.binishmatheww.scanner.models.PdfFile
 import com.binishmatheww.scanner.viewmodels.HomeViewModel
+import dagger.hilt.android.AndroidEntryPoint
 
-
+@AndroidEntryPoint
 class HomeFragment : Fragment() {
 
     private val homeViewModel by viewModels<HomeViewModel>()
