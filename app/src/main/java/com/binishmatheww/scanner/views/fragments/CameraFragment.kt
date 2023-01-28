@@ -27,24 +27,29 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.constraintlayout.compose.ConstraintLayout
+import androidx.core.net.toUri
 import androidx.exifinterface.media.ExifInterface
 import androidx.fragment.app.Fragment
+import androidx.fragment.app.viewModels
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.findNavController
 import com.binishmatheww.camera.composables.CameraPreviewLayout
-import com.binishmatheww.camera.composables.rememberCameraController
 import com.binishmatheww.camera.models.SmartSize
 import com.binishmatheww.scanner.R
 import com.binishmatheww.scanner.common.theme.AppTheme
 import com.binishmatheww.scanner.common.utils.animateScrollAndCentralizeItem
 import com.binishmatheww.scanner.common.utils.getOptimalSizeFor
 import com.binishmatheww.scanner.common.utils.temporaryLocation
+import com.binishmatheww.scanner.models.PdfFile
+import com.binishmatheww.scanner.viewmodels.CameraViewModel
+import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
-import java.io.File
 import java.io.Serializable
 
-
+@AndroidEntryPoint
 class CameraFragment : Fragment() {
+
+    private val cameraViewModel by viewModels<CameraViewModel>()
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
 
@@ -83,7 +88,7 @@ class CameraFragment : Fragment() {
 
     @Composable
     fun CameraScreen(
-        oncCaptureComplete : (List<File>) -> Unit
+        oncCaptureComplete : (List<PdfFile>) -> Unit
     ) {
 
         AppTheme.ScannerTheme {
@@ -95,8 +100,6 @@ class CameraFragment : Fragment() {
             ) {
 
                 val context = LocalContext.current
-
-                val images = remember { mutableStateListOf<File>() }
 
                 val density = LocalDensity.current
 
@@ -114,7 +117,7 @@ class CameraFragment : Fragment() {
                     nextButtonConstraint,
                 ) = createRefs()
 
-                val cameraController = rememberCameraController()
+                val cameraController = remember { cameraViewModel.cameraController }
 
                 LaunchedEffect(
                     key1 = cameraController,
@@ -255,7 +258,12 @@ class CameraFragment : Fragment() {
                                         }
                                     }
 
-                                    images.add(file)
+                                    cameraViewModel.images.add(
+                                        PdfFile(
+                                            uri = file.toUri(),
+                                            displayName = file.nameWithoutExtension,
+                                        )
+                                    )
 
                                 }
 
@@ -286,7 +294,7 @@ class CameraFragment : Fragment() {
                         .size(60.dp),
                     onClick = {
 
-                        oncCaptureComplete.invoke(images)
+                        oncCaptureComplete.invoke(cameraViewModel.images)
                         if (isFlashTorchEnabled) {
                             cameraController.cameraScope.launch {
                                 cameraController.toggleFlashTorch()
@@ -299,7 +307,7 @@ class CameraFragment : Fragment() {
                         Icon(
                             painter = painterResource(id = R.drawable.nextic),
                             contentDescription = null,
-                            tint = if(images.isEmpty()) MaterialTheme.colorScheme.secondary
+                            tint = if(cameraViewModel.images.isEmpty()) MaterialTheme.colorScheme.secondary
                             else MaterialTheme.colorScheme.primary
                         )
 
