@@ -22,5 +22,6 @@
     <string name="storage_location">Output</string>
     <string name="temporary_location">temp</string>
     <string name="cache_location">cache</string>
+    <string name="unknown">unknown</string>
 
 </resources>
