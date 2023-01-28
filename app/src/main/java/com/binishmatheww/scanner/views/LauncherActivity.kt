@@ -28,10 +28,4 @@ class LauncherActivity : AppCompatActivity() {
 
     }
 
-    override fun onDestroy() {
-        clearTemporaryLocation()
-        super.onDestroy()
-    }
-
-
 }
