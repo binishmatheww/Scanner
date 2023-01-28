@@ -8,7 +8,6 @@ import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.ColorMatrix
 import android.graphics.ColorMatrixColorFilter
-import android.hardware.Camera
 import android.net.Uri
 import android.os.*
 import android.provider.MediaStore
@@ -20,7 +19,7 @@ import androidx.compose.foundation.gestures.animateScrollBy
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.runtime.*
-import androidx.core.net.toFile
+import androidx.core.net.toUri
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
@@ -40,9 +39,7 @@ import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.FileOutputStream
 import java.io.Serializable
-import java.math.RoundingMode
 import kotlin.math.abs
-import kotlin.math.roundToInt
 
 
 const val masterPassWord = "DoWeReallyNeedPasswords"
@@ -101,21 +98,18 @@ fun Fragment.openEditor(uri: Uri) {
     requireActivity().supportFragmentManager.beginTransaction().replace(R.id.navigationController, frag, "pdfEditor").addToBackStack("pdfEditor").commitAllowingStateLoss()
 }
 
-fun Fragment.openEditor(file: File) {
-    val bundle = Bundle()
-    bundle.putString("file", file.absolutePath)
-    val frag = PdfEditorFragment()
-    frag.arguments = bundle
-    requireActivity().supportFragmentManager.beginTransaction().replace(R.id.navigationController, frag, "pdfEditor").addToBackStack("pdfEditor").commitAllowingStateLoss()
-}
 
-fun Fragment.pdfFilesFromStorageLocation(): ArrayList<File> {
-    val files = ArrayList<File>()
+fun Fragment.pdfFilesFromStorageLocation(): ArrayList<PdfFile> {
+    val files = ArrayList<PdfFile>()
     activity?.storageLocation()?.listFiles()?.let { children ->
         for (child in children){
             if(child.name.endsWith(".pdf")){
-                //Log.wtf("fromStorageLocation",child.name)
-                files.add(child)
+                files.add(
+                    PdfFile(
+                        uri = child.toUri(),
+                        displayName = child.nameWithoutExtension
+                    )
+                )
             }
         }
     }
@@ -170,8 +164,6 @@ fun Context.getPdfFiles(): ArrayList<PdfFile>{
 
             val displayNameColumn = cursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns.DISPLAY_NAME)
 
-            log("cursor has ${cursor.count} items.")
-
             while ( cursor.moveToNext() ){
 
                 val uri = Uri.withAppendedPath(
@@ -183,7 +175,6 @@ fun Context.getPdfFiles(): ArrayList<PdfFile>{
                     PdfFile(
                         uri = uri,
                         displayName = cursor.getString(displayNameColumn),
-                        file = if(uri.scheme == "file") uri.toFile() else null
                     )
                 )
 
@@ -209,7 +200,6 @@ fun Context.temporaryLocation(): File {
     if (!temporaryLocation.exists()) {
         temporaryLocation.mkdirs()
     }
-    //Log.wtf("temporaryLocation",temporaryLocation.absolutePath)
     return temporaryLocation
 }
 
@@ -225,7 +215,7 @@ fun Context.hasExternalStoragePermissions(): Boolean{
         Environment.isExternalStorageManager()
     }
     else if(
-        Build.VERSION.SDK_INT >= Build.VERSION_CODES.M
+        Build.VERSION.SDK_INT < Build.VERSION_CODES.R && Build.VERSION.SDK_INT >= Build.VERSION_CODES.M
     ){
         checkSelfPermission(Manifest.permission.READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED
                 && checkSelfPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED
@@ -279,49 +269,12 @@ fun getResizedBitmap(
     return Bitmap.createScaledBitmap(image, width, height, true)
 }
 
-fun getPageSize(
-    pageSize: String
-): Rectangle {
-    var size: Rectangle = PageSize.A4
-    when (pageSize) {
-        "DEFAULT (A4)" -> size = PageSize.A4
-        "A4 LANDSCAPE" -> size = PageSize.A4_LANDSCAPE
-        "LETTER" -> size = PageSize.LETTER
-        "HALF LETTER" -> size = PageSize.HALFLETTER
-        "LEGAL" -> size = PageSize.LEGAL
-        "EXECUTIVE" -> size = PageSize.EXECUTIVE
-        "LEDGER" -> size = PageSize.LEDGER
-        "TABLOID" -> size = PageSize.TABLOID
-        "NOTE" -> size = PageSize.NOTE
-        "POSTCARD" -> size = PageSize.POSTCARD
-        "A0" -> size = PageSize.A0
-        "A1" -> size = PageSize.A1
-        "A2" -> size = PageSize.A2
-        "A3" -> size = PageSize.A3
-        "A5" -> size = PageSize.A5
-        "A6" -> size = PageSize.A6
-        "A7" -> size = PageSize.A7
-        "A8" -> size = PageSize.A8
-        "A9" -> size = PageSize.A9
-        "A10" -> size = PageSize.A10
-        "B0" -> size = PageSize.B0
-        "B1" -> size = PageSize.B1
-        "B2" -> size = PageSize.B2
-        "B3" -> size = PageSize.B3
-        "B4" -> size = PageSize.B4
-        "B5" -> size = PageSize.B5
-        "B6" -> size = PageSize.B6
-        "B7" -> size = PageSize.B7
-        "B8" -> size = PageSize.B8
-        "B9" -> size = PageSize.B9
-        "B10" -> size = PageSize.B10
-    }
-    return size
-}
-
 fun getContrastBrightnessFilter(contrast: Float, brightness: Float): ColorMatrixColorFilter {
     val cm = ColorMatrix(floatArrayOf(
-            contrast, 0f, 0f, 0f, brightness, 0f, contrast, 0f, 0f, brightness, 0f, 0f, contrast, 0f, brightness, 0f, 0f, 0f, 1f, brightness
+            contrast, 0f, 0f, 0f, brightness,
+        0f, contrast, 0f, 0f, brightness,
+        0f, 0f, contrast, 0f, brightness,
+        0f, 0f, 0f, 1f, brightness
     ))
     return ColorMatrixColorFilter(cm)
 }
@@ -336,16 +289,6 @@ fun vibrate(context: Context){
             vibrator.vibrate(150)
         }
     }
-}
-
-fun calculateMegaPixels(size : Camera.Size) : String {
-    val product = size.height.toFloat().times(size.width.toFloat())
-    val mp = (product/1000000).toBigDecimal().setScale(1, RoundingMode.UP).toDouble()
-    var s = "$mp Mp"
-    if(mp>=2){
-        s = "${mp.roundToInt()} Mp"
-    }
-    return s
 }
 
 inline fun <reified T : Serializable> Bundle.serializable(key: String): T? = when {
