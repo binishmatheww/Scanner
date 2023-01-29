@@ -2,19 +2,27 @@ package com.binishmatheww.scanner.views.fragments.dialogs
 
 import android.app.Dialog
 import android.os.Bundle
-import android.util.Log
-import androidx.fragment.app.Fragment
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
+import androidx.constraintlayout.compose.ConstraintLayout
+import androidx.constraintlayout.compose.Dimension
 import androidx.fragment.app.DialogFragment
 import com.binishmatheww.scanner.R
+import com.binishmatheww.scanner.views.composables.ClickableIcon
 import com.binishmatheww.scanner.views.listeners.OnDialogButtonClickListener
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers.Main
-import kotlinx.coroutines.launch
 
 
 class EditorExtraDialog(private val onDialogButtonClickListener: OnDialogButtonClickListener) : DialogFragment() {
@@ -77,5 +85,161 @@ class EditorExtraDialog(private val onDialogButtonClickListener: OnDialogButtonC
         return builder.create()
     }
 
+
+}
+
+@Composable
+fun EditorExtraDialog(
+    modifier: Modifier = Modifier,
+    onDismissRequest: () -> Unit
+){
+
+    //val context = LocalContext.current
+
+    Dialog(
+        onDismissRequest = onDismissRequest,
+        properties = DialogProperties(
+            dismissOnBackPress = true,
+            dismissOnClickOutside = true
+        ),
+    ) {
+
+        Card(
+            modifier = modifier,
+            shape = RoundedCornerShape(10.dp),
+            elevation = CardDefaults.cardElevation()
+        ){
+
+            ConstraintLayout(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .wrapContentHeight()
+            ) {
+
+                val (
+                    firstRowConstraint,
+                    secondRowConstraint,
+                    thirdRowConstraint,
+                ) = createRefs()
+
+                Row(
+                    modifier = Modifier
+                        .constrainAs(firstRowConstraint){
+                            top.linkTo(parent.top, 12.dp)
+                            start.linkTo(parent.start)
+                            end.linkTo(parent.end)
+                            width = Dimension.fillToConstraints
+                            height = Dimension.wrapContent
+                        },
+                    horizontalArrangement = Arrangement.Center
+                ) {
+
+                    ClickableIcon(
+                        modifier = Modifier
+                            .size(100.dp),
+                        painter = painterResource(id = R.drawable.addpdf),
+                        onClick = {
+
+                        }
+                    )
+
+                    ClickableIcon(
+                        modifier = Modifier
+                            .size(100.dp),
+                        painter = painterResource(id = R.drawable.addimg),
+                        onClick = {
+
+                        }
+                    )
+
+                    ClickableIcon(
+                        modifier = Modifier
+                            .size(100.dp),
+                        painter = painterResource(id = R.drawable.addtxt),
+                        onClick = {
+
+                        }
+                    )
+
+                }
+
+                Row(
+                    modifier = Modifier
+                        .constrainAs(secondRowConstraint){
+                            top.linkTo(firstRowConstraint.bottom, 6.dp)
+                            start.linkTo(parent.start)
+                            end.linkTo(parent.end)
+                            width = Dimension.fillToConstraints
+                            height = Dimension.wrapContent
+                        },
+                    horizontalArrangement = Arrangement.Center
+                ) {
+
+                    ClickableIcon(
+                        modifier = Modifier
+                            .size(100.dp),
+                        painter = painterResource(id = R.drawable.exportpdf),
+                        onClick = {
+
+                        }
+                    )
+
+                    ClickableIcon(
+                        modifier = Modifier
+                            .size(100.dp),
+                        painter = painterResource(id = R.drawable.splitpdf),
+                        onClick = {
+
+                        }
+                    )
+
+                    ClickableIcon(
+                        modifier = Modifier
+                            .size(100.dp),
+                        painter = painterResource(id = R.drawable.pdftoimg),
+                        onClick = {
+
+                        }
+                    )
+
+                }
+
+                Row(
+                    modifier = Modifier
+                        .constrainAs(thirdRowConstraint){
+                            top.linkTo(secondRowConstraint.bottom, 6.dp)
+                            start.linkTo(parent.start)
+                            end.linkTo(parent.end)
+                            width = Dimension.fillToConstraints
+                            height = Dimension.wrapContent
+                        },
+                    horizontalArrangement = Arrangement.Center
+                ) {
+
+                    ClickableIcon(
+                        modifier = Modifier
+                            .size(100.dp),
+                        painter = painterResource(id = R.drawable.compresspdf),
+                        onClick = {
+
+                        }
+                    )
+
+                    ClickableIcon(
+                        modifier = Modifier
+                            .size(100.dp),
+                        painter = painterResource(id = R.drawable.encryptpdf),
+                        onClick = {
+
+                        }
+                    )
+
+                }
+
+            }
+
+        }
+
+    }
 
 }
