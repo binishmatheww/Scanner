@@ -1,7 +1,6 @@
 package com.binishmatheww.scanner.views.fragments
 
 import android.graphics.*
-import android.os.Build
 import android.os.Bundle
 import android.util.Log
 import android.view.LayoutInflater
@@ -10,11 +9,10 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
 import android.widget.ImageView
-import android.widget.RelativeLayout
-import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.setFragmentResult
 import com.binishmatheww.scanner.R
+import com.binishmatheww.scanner.common.PdfEditor
 import com.binishmatheww.scanner.common.utils.temporaryLocation
 import java.io.BufferedOutputStream
 import java.io.File
@@ -61,9 +59,9 @@ class PerspectiveCorrectionFragment : Fragment() {
 
             temporaryLocation().absolutePath
                 .plus(File.separator)
-                .plus(getString(R.string.image_prefix))
+                .plus(PdfEditor.Constants.IMAGE_PREFIX)
                 .plus(System.currentTimeMillis())
-                .plus(requireContext().getString(R.string.image_extension))
+                .plus(PdfEditor.Constants.IMAGE_EXTENSION)
 
         } ?: return
 
