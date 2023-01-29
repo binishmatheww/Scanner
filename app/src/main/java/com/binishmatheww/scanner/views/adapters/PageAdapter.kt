@@ -16,10 +16,9 @@ import android.widget.TextView
 import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.recyclerview.widget.RecyclerView
 import com.binishmatheww.scanner.R
-import com.binishmatheww.scanner.views.listeners.PageClickListener
 import com.binishmatheww.scanner.common.utils.getContrastBrightnessFilter
-import com.binishmatheww.scanner.common.utils.getResizedBitmap
 import com.binishmatheww.scanner.common.utils.vibrate
+import com.binishmatheww.scanner.views.listeners.PageClickListener
 import com.bumptech.glide.Glide
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers.Default
@@ -75,14 +74,14 @@ class PageAdapter(var context: Context,var pages: ArrayList<File>,var pageClickL
 
                 withContext(Main) {
                     Glide.with(context).load(bitmap).into(holder.page)
-                    holder.pageNo.text = context.getString(R.string.page_prefix).plus((position + 1).toString())
+                    //holder.pageNo.text = context.getString(R.string.page_prefix).plus((position + 1).toString())
 
                     holder.page.setOnClickListener {
                         //pageClickListener.pageClicked(position)
                     }
 
                     holder.page.setOnLongClickListener{
-                        vibrate(context)
+                        context.vibrate()
                         if (holder.options.visibility == View.INVISIBLE) {
                             holder.options.visibility = View.VISIBLE
                             pageClickListener.pageClicked(position)
