@@ -29,10 +29,9 @@ import androidx.navigation.NavController
 import androidx.navigation.fragment.findNavController
 import com.binishmatheww.camera.models.SmartSize
 import com.binishmatheww.scanner.R
+import com.binishmatheww.scanner.common.PdfEditor
 import com.binishmatheww.scanner.models.PdfFile
 import com.binishmatheww.scanner.views.fragments.PdfEditorFragment
-import com.itextpdf.text.PageSize
-import com.itextpdf.text.Rectangle
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import java.io.ByteArrayOutputStream
@@ -187,16 +186,15 @@ fun Context.getPdfFiles(): ArrayList<PdfFile>{
 }
 
 fun Context.storageLocation(): File{
-    val storageLocation = File(getExternalFilesDir(null), File.separator + getString(R.string.storage_location))
+    val storageLocation = File(getExternalFilesDir(null), File.separator + PdfEditor.Constants.OUTPUT_FOLDER)
     if (!storageLocation.exists()) {
         storageLocation.mkdirs()
     }
-    //Log.wtf("storageLocation",storageLocation.absolutePath)
     return storageLocation
 }
 
 fun Context.temporaryLocation(): File {
-    val temporaryLocation = File(getExternalFilesDir(null), File.separator + getString(R.string.temporary_location))
+    val temporaryLocation = File(getExternalFilesDir(null), File.separator + PdfEditor.Constants.TEMP_FOLDER)
     if (!temporaryLocation.exists()) {
         temporaryLocation.mkdirs()
     }
@@ -279,14 +277,16 @@ fun getContrastBrightnessFilter(contrast: Float, brightness: Float): ColorMatrix
     return ColorMatrixColorFilter(cm)
 }
 
-fun vibrate(context: Context){
-    val vibrator = context.getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
+fun Context.vibrate(
+    durationInMillis : Long = 50
+){
+    val vibrator = getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
     if(vibrator.hasVibrator()){
         if(Build.VERSION.SDK_INT >= 26){
-            vibrator.vibrate(VibrationEffect.createOneShot(150, VibrationEffect.DEFAULT_AMPLITUDE))
+            vibrator.vibrate(VibrationEffect.createOneShot(durationInMillis, VibrationEffect.DEFAULT_AMPLITUDE))
         }
         else{
-            vibrator.vibrate(150)
+            vibrator.vibrate(durationInMillis)
         }
     }
 }
