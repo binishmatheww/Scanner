@@ -1,7 +1,6 @@
 package com.binishmatheww.scanner.views.fragments
 
 import android.app.Activity.RESULT_OK
-import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.Canvas
@@ -46,6 +45,7 @@ import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.constraintlayout.compose.ConstraintLayout
 import androidx.constraintlayout.compose.Dimension
+import androidx.core.net.toFile
 import androidx.documentfile.provider.DocumentFile
 import androidx.fragment.app.DialogFragment
 import androidx.fragment.app.Fragment
@@ -59,8 +59,10 @@ import coil.memory.MemoryCache
 import coil.request.CachePolicy
 import coil.request.ImageRequest
 import com.binishmatheww.scanner.R
+import com.binishmatheww.scanner.common.PdfEditor
 import com.binishmatheww.scanner.common.theme.AppTheme
 import com.binishmatheww.scanner.common.utils.*
+import com.binishmatheww.scanner.models.PdfFile
 import com.binishmatheww.scanner.viewmodels.PdfEditorViewModel
 import com.binishmatheww.scanner.views.fragments.dialogs.EditorExtraDialog
 import com.binishmatheww.scanner.views.fragments.dialogs.EncryptPdfDialog
@@ -91,7 +93,20 @@ class PdfEditorFragment : Fragment() {
 
     private val pdfEditorViewModel by viewModels<PdfEditorViewModel>()
 
-    private lateinit var timeStamp : String
+    private val calendar = Calendar.getInstance()
+
+    private var timeStamp = PdfEditor.Constants.PDF_PREFIX
+        .plus(calendar.get(Calendar.YEAR))
+        .plus("-")
+        .plus((calendar.get(Calendar.MONTH) + 1))
+        .plus("-")
+        .plus(calendar.get(Calendar.DAY_OF_MONTH))
+        .plus("_")
+        .plus(calendar.get(Calendar.HOUR))
+        .plus(":")
+        .plus(calendar.get(Calendar.MINUTE))
+        .plus(":")
+        .plus(calendar.get(Calendar.SECOND))
 
     private var dialog: DialogFragment? = null
 
@@ -103,48 +118,64 @@ class PdfEditorFragment : Fragment() {
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
 
-        val calendar = Calendar.getInstance()
-
-        timeStamp = getString(R.string.pdf_prefix)
-            .plus(calendar.get(Calendar.YEAR))
-            .plus("-")
-            .plus((calendar.get(Calendar.MONTH)+1))
-            .plus("-")
-            .plus(calendar.get(Calendar.DAY_OF_MONTH))
-            .plus("_")
-            .plus(calendar.get(Calendar.HOUR))
-            .plus(":")
-            .plus(calendar.get(Calendar.MINUTE))
-            .plus(":")
-            .plus(calendar.get(Calendar.SECOND))
-
-        arguments?.getBundle("images")?.serializable<ArrayList<File>>("pages")?.let{ images ->
+        arguments?.getBundle("images")?.serializable<ArrayList<PdfFile>>("pages")?.let{ pdfFiles ->
 
             lifecycleScope.launch {
 
                activity?.let { activity ->
 
-                   for ( image in images) {
+                   val contentResolver = activity.contentResolver
 
-                       pdfEditorViewModel.pdfEditor.convertImageToPdf(
-                           imageToBeConverted = image.readBytes(),
-                           outputFile = File(
-                               activity.temporaryLocation().absolutePath
-                                   .plus(File.separator)
-                                   .plus(getString(R.string.page_prefix))
-                                   .plus(image.nameWithoutExtension)
-                                   .plus("_")
-                                   .plus(System.currentTimeMillis())
-                                   .plus(getString(R.string.page_extension))
-                           ),
-                           position = 0,
-                           pageSize = pdfEditorViewModel.pageSize,
-                           imageToPdfListener = object : ImageToPdfListener {
-                               override fun postExecute(result: File, position: Int) {
-                                   pdfEditorViewModel.pages.add(result)
+                   for ( pdfFile in pdfFiles ) {
+
+                       pdfFile.uri?.let { uri ->
+
+                           try{
+
+                               when (uri.scheme) {
+
+                                   "file" -> {
+                                       uri.toFile().inputStream()
+                                   }
+
+                                   "content" -> {
+                                       contentResolver.openInputStream(uri)
+                                   }
+
+                                   else -> {
+                                       null
+                                   }
+
                                }
+
                            }
-                       )
+                           catch ( e : Exception ){ null }
+                               ?.use { inputStream ->
+
+                               pdfEditorViewModel.pdfEditor.convertImageToPdf(
+                                   imageToBeConverted = inputStream.readBytes(),
+                                   outputFile = File(
+                                       activity.temporaryLocation().absolutePath
+                                           .plus(File.separator)
+                                           .plus(PdfEditor.Constants.PAGE_PREFIX)
+                                           .plus(pdfFile.displayName)
+                                           .plus("_")
+                                           .plus(System.currentTimeMillis())
+                                           .plus(PdfEditor.Constants.PAGE_EXTENSION)
+                                   ),
+                                   position = 0,
+                                   pageSize = pdfEditorViewModel.pageSize,
+                                   imageToPdfListener = object : ImageToPdfListener {
+                                       override fun postExecute(result: File, position: Int) {
+                                           pdfEditorViewModel.pages.add(result)
+                                       }
+                                   }
+                               )
+
+                           }
+
+
+                       }
 
                    }
 
@@ -182,9 +213,9 @@ class PdfEditorFragment : Fragment() {
 
                     pdfEditorViewModel.pdfEditor.convertImageToPdf(
                         imageToBeConverted = File(it).readBytes(),
-                        outputFile = File(it.plus(getString(R.string.page_extension))),
+                        outputFile = File(it.plus(PdfEditor.Constants.PAGE_EXTENSION)),
                         position = pdfEditorViewModel.editAtPosition,
-                        pageSize = getPageSize("DEFAULT (A4)"),
+                        pageSize = PageSize.A4,
                         imageToPdfListener = object : ImageToPdfListener {
                             override fun postExecute(result: File, position: Int) {
                                 pdfEditorViewModel.pages[position].delete()
@@ -205,9 +236,9 @@ class PdfEditorFragment : Fragment() {
                     for(image in images){
                         pdfEditorViewModel.pdfEditor.convertImageToPdf(
                             imageToBeConverted = image.readBytes(),
-                            outputFile = File(image.absolutePath.plus(getString(R.string.page_extension))),
+                            outputFile = File(image.absolutePath.plus(PdfEditor.Constants.PAGE_EXTENSION)),
                             position = 0 ,
-                            pageSize = getPageSize("DEFAULT (A4)"),
+                            pageSize = PageSize.A4,
                             imageToPdfListener = object : ImageToPdfListener {
                                 override fun postExecute(result: File, position: Int) {
                                     image.delete()
@@ -236,7 +267,7 @@ class PdfEditorFragment : Fragment() {
                         .plus(File.separator)
                         .plus(System.currentTimeMillis().toString())
                         .plus("_Ocr")
-                        .plus(getString(R.string.page_extension))
+                        .plus(PdfEditor.Constants.PAGE_EXTENSION)
 
                     try {
                         val writer = PdfWriter.getInstance(document, FileOutputStream(inputPath))
@@ -255,11 +286,11 @@ class PdfEditorFragment : Fragment() {
                                     File(
                                         activity.temporaryLocation().absolutePath
                                             .plus(File.separator.toString())
-                                            .plus(getString(R.string.page_prefix))
+                                            .plus(PdfEditor.Constants.PAGE_PREFIX)
                                             .plus(i)
                                             .plus("_")
                                             .plus(System.currentTimeMillis())
-                                            .plus(getString(R.string.page_extension))
+                                            .plus(PdfEditor.Constants.PAGE_EXTENSION)
                                     )
                                 )
                             )
@@ -306,11 +337,11 @@ class PdfEditorFragment : Fragment() {
                                     outputFile = File(
                                         activity.temporaryLocation().absolutePath
                                             .plus(File.separator)
-                                            .plus(getString(R.string.page_prefix))
+                                            .plus(PdfEditor.Constants.PAGE_PREFIX)
                                             .plus(i)
                                             .plus("_")
                                             .plus(System.currentTimeMillis())
-                                            .plus(getString(R.string.page_extension))
+                                            .plus(PdfEditor.Constants.PAGE_EXTENSION)
                                     ),
                                     position = i,
                                     pageSize = pdfEditorViewModel.pageSize,
@@ -343,10 +374,10 @@ class PdfEditorFragment : Fragment() {
                                     outputFile = File(
                                         activity.temporaryLocation().absolutePath
                                             .plus(File.separator)
-                                            .plus(getString(R.string.page_prefix))
+                                            .plus(PdfEditor.Constants.PAGE_PREFIX)
                                             .plus("_")
                                             .plus(System.currentTimeMillis())
-                                            .plus(getString(R.string.page_extension))
+                                            .plus(PdfEditor.Constants.PAGE_EXTENSION)
                                     ),
                                     position = pdfEditorViewModel.addImageAtPosition,
                                     pageSize = pdfEditorViewModel.pageSize,
@@ -385,11 +416,11 @@ class PdfEditorFragment : Fragment() {
                                             imageToBeConverted = inputStream.readBytes(),
                                             outputFile = File(
                                                 activity.temporaryLocation().absolutePath
-                                                    .plus(getString(R.string.page_prefix))
+                                                    .plus(PdfEditor.Constants.PAGE_PREFIX)
                                                     .plus(i)
                                                     .plus("_")
                                                     .plus(System.currentTimeMillis())
-                                                    .plus(getString(R.string.page_extension))
+                                                    .plus(PdfEditor.Constants.PAGE_EXTENSION)
                                             ),
                                             position = i,
                                             pageSize = pdfEditorViewModel.pageSize,
@@ -450,7 +481,7 @@ class PdfEditorFragment : Fragment() {
                                         val name = activity.temporaryLocation().absolutePath
                                             .plus(File.separator)
                                             .plus(timeStamp)
-                                            .plus(getString(R.string.pdf_extension))
+                                            .plus(PdfEditor.Constants.PDF_EXTENSION)
 
                                         val document = Document(PageSize.A4)
                                         document.setMargins(10f, 10f, 10f, 10f)
@@ -544,12 +575,14 @@ class PdfEditorFragment : Fragment() {
 
             var isEditing by remember { mutableStateOf(false) }
 
+            var shouldShowEditorExtraDialog by pdfEditorViewModel.shouldShowEditorExtraDialog
+
             LaunchedEffect(
                 key1 = isEditing,
                 block = {
 
                     if(isEditing){
-                        vibrate(context)
+                        context.vibrate()
                     }
 
                 }
@@ -567,14 +600,14 @@ class PdfEditorFragment : Fragment() {
                         containerColor = MaterialTheme.colorScheme.primary,
                         contentColor = MaterialTheme.colorScheme.onPrimary,
                         onClick = {
-                            editorExtraDialog()
+                            shouldShowEditorExtraDialog = true
                         }
                     ){
                         Icon(
                             modifier = Modifier
                                 .size(60.dp),
                             painter = painterResource(id = R.drawable.settingsic),
-                            contentDescription = ""
+                            contentDescription = context.getString(R.string.Settings)
                         )
                     }
 
@@ -643,6 +676,22 @@ class PdfEditorFragment : Fragment() {
                             )
 
                         }
+                    }
+                )
+
+            }
+
+            if(shouldShowEditorExtraDialog){
+
+                EditorExtraDialog(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .wrapContentHeight()
+                        .padding(
+                            all = 8.dp
+                        ),
+                    onDismissRequest = {
+                        shouldShowEditorExtraDialog = false
                     }
                 )
 
@@ -857,7 +906,7 @@ class PdfEditorFragment : Fragment() {
                                     onPageUp.invoke(index)
                                 },
                             painter = painterResource(id = R.drawable.reordup),
-                            contentDescription = "Up",
+                            contentDescription = context.getString(R.string.Up),
                             colorFilter = ColorFilter.tint(MaterialTheme.colorScheme.primary)
                         )
 
@@ -868,7 +917,7 @@ class PdfEditorFragment : Fragment() {
                                     onPageDown.invoke(index)
                                 },
                             painter = painterResource(id = R.drawable.reorddown),
-                            contentDescription = "Down",
+                            contentDescription = context.getString(R.string.Down),
                             colorFilter = ColorFilter.tint(MaterialTheme.colorScheme.primary)
                         )
 
@@ -977,7 +1026,7 @@ class PdfEditorFragment : Fragment() {
 
             pdfEditorViewModel.pdfEditor.mergePdf(
                 pages = toExport,
-                outputFile = activity?.run { File(storageLocation().absolutePath.plus(File.separator).plus(timeStamp).plus(getString(R.string.pdf_extension))) } ?: return@launch,
+                outputFile = activity?.run { File(storageLocation().absolutePath.plus(File.separator).plus(timeStamp).plus(PdfEditor.Constants.PDF_EXTENSION)) } ?: return@launch,
                 mergePdfListener = object : MergePdfListener {
                     override fun onPreExecute(count: Int) {
                         progressDialog("Exporting", count)
@@ -1060,7 +1109,7 @@ class PdfEditorFragment : Fragment() {
                             .plus(File.separator)
                             .plus(timeStamp)
                             .plus("_compressed")
-                            .plus(getString(R.string.pdf_extension)))
+                            .plus(PdfEditor.Constants.PDF_EXTENSION))
 
                 } ?: return@launch,
                 compressionListener = object : CompressionListener {
@@ -1102,7 +1151,7 @@ class PdfEditorFragment : Fragment() {
                                         .plus(File.separator)
                                         .plus(timeStamp)
                                         .plus("_encrypted")
-                                        .plus(activity?.getString(R.string.pdf_extension))
+                                        .plus(PdfEditor.Constants.PDF_EXTENSION)
                                 )
                             } ?: return@launch,
                             inputPassword = inputPassword,
@@ -1161,9 +1210,9 @@ class PdfEditorFragment : Fragment() {
             page.render(bitmap, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
             val file = File(
                 activity?.temporaryLocation() ?: return,
-                getString(R.string.image_prefix) + System.currentTimeMillis() + getString(
-                    R.string.image_extension
-                )
+                PdfEditor.Constants.IMAGE_PREFIX
+                    .plus(System.currentTimeMillis())
+                    .plus(PdfEditor.Constants.IMAGE_EXTENSION)
             )
             file.createNewFile()
             val os: OutputStream = BufferedOutputStream(FileOutputStream(file))
@@ -1306,11 +1355,11 @@ class PdfEditorFragment : Fragment() {
                                 imageToBeConverted = inputStream.readBytes(),
                                 outputFile = File(
                                     activity?.temporaryLocation()?.absolutePath
-                                        ?.plus(getString(R.string.page_prefix))
+                                        ?.plus(PdfEditor.Constants.PAGE_PREFIX)
                                         ?.plus(pdfEditorViewModel.editAtPosition.toString())
                                         ?.plus("_")
                                         ?.plus(System.currentTimeMillis())
-                                        ?.plus(getString(R.string.page_extension)) ?: return@launch
+                                        ?.plus(PdfEditor.Constants.PAGE_EXTENSION) ?: return@launch
                                 ),
                                 position = pdfEditorViewModel.editAtPosition,
                                 pageSize = pdfEditorViewModel.pageSize,
@@ -1356,7 +1405,7 @@ class PdfEditorFragment : Fragment() {
                             temporaryLocation().absolutePath
                                 .plus(System.currentTimeMillis())
                                 .plus("_rotated")
-                                .plus(getString(R.string.page_extension))
+                                .plus(PdfEditor.Constants.PDF_EXTENSION)
                         } ?: return@launch
                     ),
                     rotatePageListener = object : RotatePageListener {
@@ -1391,7 +1440,9 @@ class PdfEditorFragment : Fragment() {
                 val file = activity?.run {
                     File(
                         temporaryLocation(),
-                        getString(R.string.image_prefix).plus(System.currentTimeMillis()).plus( getString(R.string.image_extension))
+                        PdfEditor.Constants.IMAGE_PREFIX
+                            .plus(System.currentTimeMillis())
+                            .plus(PdfEditor.Constants.IMAGE_EXTENSION)
                     )
                 } ?: return
                 file.createNewFile()
@@ -1432,10 +1483,10 @@ class PdfEditorFragment : Fragment() {
                     filteredImage = activity?.run {
                         File(
                             temporaryLocation(),
-                            getString(R.string.image_prefix)
+                            PdfEditor.Constants.IMAGE_PREFIX
                                 .plus(System.currentTimeMillis())
                                 .plus("_filtered" )
-                                .plus(getString(R.string.image_extension))
+                                .plus(PdfEditor.Constants.IMAGE_EXTENSION)
                         )
                     } ?: return@launch,
                     filterImageListener = object : FilterImageListener {
@@ -1443,9 +1494,9 @@ class PdfEditorFragment : Fragment() {
 
                             pdfEditorViewModel.pdfEditor.convertImageToPdf(
                                 imageToBeConverted = filteredImage.readBytes(),
-                                outputFile = File(filteredImage.absolutePath.plus(R.string.pdf_extension)),
+                                outputFile = File(filteredImage.absolutePath.plus(PdfEditor.Constants.PDF_EXTENSION)),
                                 position = position,
-                                pageSize = getPageSize("DEFAULT (A4)"),
+                                pageSize = PageSize.A4,
                                 imageToPdfListener = object : ImageToPdfListener {
                                     override fun postExecute(result: File, position: Int) {
                                         filteredImage.delete()
