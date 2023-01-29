@@ -6,11 +6,10 @@ import android.graphics.pdf.PdfRenderer
 import android.os.ParcelFileDescriptor
 import android.util.Log
 import androidx.documentfile.provider.DocumentFile
-import com.binishmatheww.scanner.R
 import com.binishmatheww.scanner.common.utils.ExifReader
-import com.binishmatheww.scanner.views.listeners.*
 import com.binishmatheww.scanner.common.utils.TYPE_JPG
 import com.binishmatheww.scanner.common.utils.temporaryLocation
+import com.binishmatheww.scanner.views.listeners.*
 import com.itextpdf.text.Document
 import com.itextpdf.text.Image
 import com.itextpdf.text.Rectangle
@@ -23,6 +22,26 @@ import java.io.*
 import kotlin.math.abs
 
 class PdfEditor {
+
+    object Constants {
+
+        const val SCANNER_PREFERENCES = "SCANNER_PREFERENCES"
+        const val PAGE_SIZE = "PAGE_SIZE"
+        const val PAGE_SIZE_INDEX = "PAGE_SIZE_INDEX"
+        const val CAMERA_SIZE_INDEX = "CAMERA_SIZE_INDEX"
+        const val PDF_PREFIX ="PDF_"
+        const val PAGE_PREFIX = "PAGE-"
+        const val IMAGE_PREFIX = "IMAGE_"
+        const val PDF_EXTENSION = ".pdf"
+        const val PAGE_EXTENSION = ".page"
+        const val IMAGE_EXTENSION = ".image"
+        const val JPG_EXTENSION = ".jpg"
+        const val PNG_EXTENSION = ".png"
+        const val OUTPUT_FOLDER = "Output"
+        const val TEMP_FOLDER = "temp"
+        const val CACHE_FOLDER = "cache"
+
+    }
 
     suspend fun convertImageToPdf(
         imageToBeConverted: ByteArray,
@@ -130,6 +149,7 @@ class PdfEditor {
             withContext(Dispatchers.Main){
                 compressionListener.preExecute(pages.size)
             }
+
             for (p in pages.indices) {
                 val reader = PdfReader(pages[p].absolutePath)
 
@@ -306,11 +326,11 @@ class PdfEditor {
                 val document = Document(reader.getPageSizeWithRotation(i))
                 val pageFile = File(
                     context.temporaryLocation(),
-                    context.getString(R.string.page_prefix) +
+                    Constants.PDF_PREFIX +
                             i +
                             "_" +
                             System.currentTimeMillis() +
-                            context.getString(R.string.page_extension)
+                            Constants.PDF_EXTENSION
                 )
                 Log.wtf("page",pageFile.absolutePath)
                 val writer = PdfCopy(document, FileOutputStream(pageFile))
@@ -363,7 +383,7 @@ class PdfEditor {
                     canvas.drawBitmap(bitmap, 0f, 0f, null)
                     page.render(bitmap, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
                     try {
-                        val image = root?.createFile(TYPE_JPG,context.getString(R.string.page_prefix) + (i + 1) + context.getString(R.string.jpeg_extension))
+                        val image = root?.createFile(TYPE_JPG,Constants.PAGE_PREFIX + (i + 1) + Constants.JPG_EXTENSION)
                         val os: OutputStream = BufferedOutputStream(context.contentResolver.openOutputStream(image!!.uri))
                         bitmap.compress(Bitmap.CompressFormat.JPEG, 100, os)
                         os.close()
