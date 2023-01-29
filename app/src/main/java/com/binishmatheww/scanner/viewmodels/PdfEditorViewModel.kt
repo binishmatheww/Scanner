@@ -2,6 +2,7 @@ package com.binishmatheww.scanner.viewmodels
 
 import android.app.Application
 import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.AndroidViewModel
 import com.binishmatheww.scanner.common.PdfEditor
 import com.itextpdf.text.PageSize
@@ -18,6 +19,8 @@ class PdfEditorViewModel @Inject constructor(
     val pdfEditor by lazy{ PdfEditor() }
 
     var pages = mutableStateListOf<File>()
+
+    var shouldShowEditorExtraDialog = mutableStateOf(false)
 
     var pageSize: Rectangle = PageSize.A4
 
