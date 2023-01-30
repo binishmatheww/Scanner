@@ -31,11 +31,10 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
-import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.ComposeView
@@ -909,6 +908,7 @@ class PdfEditorFragment : Fragment() {
                                 bottom.linkTo(parent.bottom)
                             }
                             .wrapContentSize(),
+                        horizontalAlignment = Alignment.CenterHorizontally
                     ){
 
                         Image(
@@ -920,6 +920,15 @@ class PdfEditorFragment : Fragment() {
                             painter = painterResource(id = R.drawable.reordup),
                             contentDescription = context.getString(R.string.Up),
                             colorFilter = ColorFilter.tint(MaterialTheme.colorScheme.primary)
+                        )
+
+                        Text(
+                            modifier = Modifier
+                                .clickable {
+                                    onPageDown.invoke(index)
+                                },
+                            text = "Delete",
+                            color = MaterialTheme.colorScheme.primary
                         )
 
                         Image(
@@ -945,13 +954,6 @@ class PdfEditorFragment : Fragment() {
                             .wrapContentSize(),
                         text = "Page ${index + 1}",
                         color = MaterialTheme.colorScheme.primary,
-                        style = MaterialTheme.typography.titleMedium.copy(
-                            shadow = Shadow(
-                                color = Color.Black.copy(alpha = 0.4f),
-                                offset = Offset(x = 1f, y = 2f),
-                                blurRadius = 1f
-                            )
-                        ),
                     )
 
                 }
