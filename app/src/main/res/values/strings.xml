@@ -8,5 +8,6 @@
     <string name="Settings">Settings</string>
     <string name="Up">Up</string>
     <string name="Down">Down</string>
+    <string name="Delete">Delete</string>
 
 </resources>
