@@ -663,6 +663,11 @@ class PdfEditorFragment : Fragment() {
                                     }
 
                                 },
+                                onPageDelete = { position->
+
+                                    pdfEditorViewModel.pages.removeAt(position)
+
+                                },
                                 onPageDown = { position ->
 
                                     if (position < pdfEditorViewModel.pages.lastIndex) {
@@ -722,6 +727,7 @@ class PdfEditorFragment : Fragment() {
         onLongClick: () -> Unit,
         onClick: () -> Unit,
         onPageUp:(Int) -> Unit,
+        onPageDelete:(Int) -> Unit,
         onPageDown:(Int) -> Unit,
     ){
 
@@ -925,9 +931,9 @@ class PdfEditorFragment : Fragment() {
                         Text(
                             modifier = Modifier
                                 .clickable {
-                                    onPageDown.invoke(index)
+                                    onPageDelete.invoke(index)
                                 },
-                            text = "Delete",
+                            text = LocalContext.current.getString(R.string.Delete),
                             color = MaterialTheme.colorScheme.primary
                         )
 
