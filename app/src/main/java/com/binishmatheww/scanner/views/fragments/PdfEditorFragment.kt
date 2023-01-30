@@ -690,6 +690,18 @@ class PdfEditorFragment : Fragment() {
                         .padding(
                             all = 8.dp
                         ),
+                    onOptionSelected = {
+                        when (it) {
+                            "addPdf" -> addPdf()
+                            "addImages" -> addImages()
+                            "addText" -> addTxt()
+                            "exportPdf" -> exportPdf(pdfEditorViewModel.pages.toList())
+                            "splitPdf" ->  splitPdf()
+                            "pdfToImages" -> pdfToImages()
+                            "compressPdf" -> compressPdf()
+                            "encryptPdf" -> encryptPdf()
+                        }
+                    },
                     onDismissRequest = {
                         shouldShowEditorExtraDialog = false
                     }
@@ -965,36 +977,6 @@ class PdfEditorFragment : Fragment() {
         })
         activity?.supportFragmentManager?.let {
             dialog?.show(it, "progressDialog")
-        }
-    }
-
-    private fun editorExtraDialog(){
-        dialog?.dismiss()
-        dialog = EditorExtraDialog(object : OnDialogButtonClickListener {
-
-            override fun onDialogConfirm(result: Any) {
-                dialog?.dismiss()
-                result.toString().let {
-                    when (it) {
-                        "addPdf" -> addPdf()
-                        "addImages" -> addImages()
-                        "addText" -> addTxt()
-                        "exportPdf" -> exportPdf(pdfEditorViewModel.pages.toList())
-                        "splitPdf" ->  splitPdf()
-                        "pdfToImages" -> pdfToImages()
-                        "compressPdf" -> compressPdf()
-                        "encryptPdf" -> encryptPdf()
-                    }
-                }
-            }
-
-            override fun onDialogCancel() {
-
-            }
-
-        })
-        activity?.supportFragmentManager?.let {
-            dialog?.show(it, "editorExtraDialog")
         }
     }
 
