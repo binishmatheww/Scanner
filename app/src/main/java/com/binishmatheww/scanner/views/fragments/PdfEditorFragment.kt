@@ -563,7 +563,7 @@ class PdfEditorFragment : Fragment() {
                 block = {
 
                     context.vibrate(
-                        durationInMillis = 30
+                        durationInMillis = 10
                     )
 
                 }
