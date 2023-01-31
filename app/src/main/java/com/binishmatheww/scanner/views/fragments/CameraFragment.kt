@@ -278,8 +278,8 @@ class CameraFragment : Fragment() {
                         Icon(
                             painter = painterResource(id = R.drawable.camera_button),
                             contentDescription = null,
-                            tint = if(isCaptureButtonEnabled) MaterialTheme.colorScheme.secondary
-                            else MaterialTheme.colorScheme.primary
+                            tint = if(isCaptureButtonEnabled) MaterialTheme.colorScheme.primary
+                            else MaterialTheme.colorScheme.secondary
                         )
 
                     }
