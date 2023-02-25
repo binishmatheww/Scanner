@@ -280,7 +280,12 @@ fun getContrastBrightnessFilter(contrast: Float, brightness: Float): ColorMatrix
 fun Context.vibrate(
     durationInMillis : Long = 50
 ){
-    val vibrator = getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
+    val vibrator = if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.S){
+        getSystemService(VibratorManager::class.java).defaultVibrator
+    }
+    else{
+        getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
+    }
     if(vibrator.hasVibrator()){
         if(Build.VERSION.SDK_INT >= 26){
             vibrator.vibrate(VibrationEffect.createOneShot(durationInMillis, VibrationEffect.DEFAULT_AMPLITUDE))
