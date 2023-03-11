@@ -261,7 +261,7 @@ class CameraFragment : Fragment() {
                                     cameraViewModel.images.add(
                                         PdfFile(
                                             uri = file.toUri(),
-                                            displayName = file.nameWithoutExtension,
+                                            name = file.nameWithoutExtension,
                                         )
                                     )
 
