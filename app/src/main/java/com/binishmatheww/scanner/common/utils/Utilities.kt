@@ -106,7 +106,7 @@ fun Fragment.pdfFilesFromStorageLocation(): ArrayList<PdfFile> {
                 files.add(
                     PdfFile(
                         uri = child.toUri(),
-                        displayName = child.nameWithoutExtension
+                        name = child.nameWithoutExtension
                     )
                 )
             }
@@ -173,7 +173,7 @@ fun Context.getPdfFiles(): ArrayList<PdfFile>{
                 pdfFiles.add(
                     PdfFile(
                         uri = uri,
-                        displayName = cursor.getString(displayNameColumn),
+                        name = cursor.getString(displayNameColumn),
                     )
                 )
 
