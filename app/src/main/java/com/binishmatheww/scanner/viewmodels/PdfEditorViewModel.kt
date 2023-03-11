@@ -5,10 +5,10 @@ import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.AndroidViewModel
 import com.binishmatheww.scanner.common.PdfEditor
+import com.binishmatheww.scanner.models.PdfFile
 import com.itextpdf.text.PageSize
 import com.itextpdf.text.Rectangle
 import dagger.hilt.android.lifecycle.HiltViewModel
-import java.io.File
 import javax.inject.Inject
 
 @HiltViewModel
@@ -18,7 +18,7 @@ class PdfEditorViewModel @Inject constructor(
 
     val pdfEditor by lazy{ PdfEditor() }
 
-    var pages = mutableStateListOf<File>()
+    var pages = mutableStateListOf<PdfFile>()
 
     var shouldShowEditorExtraDialog = mutableStateOf(false)
 
