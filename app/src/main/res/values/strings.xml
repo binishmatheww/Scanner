@@ -9,5 +9,6 @@
     <string name="Up">Up</string>
     <string name="Down">Down</string>
     <string name="Delete">Delete</string>
+    <string name="Page">Page</string>
 
 </resources>
