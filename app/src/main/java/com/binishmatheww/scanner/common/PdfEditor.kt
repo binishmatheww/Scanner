@@ -3,13 +3,14 @@ package com.binishmatheww.scanner.common
 import android.content.Context
 import android.graphics.*
 import android.graphics.pdf.PdfRenderer
-import android.os.ParcelFileDescriptor
+import android.net.Uri
 import android.util.Log
 import androidx.documentfile.provider.DocumentFile
 import com.binishmatheww.scanner.common.utils.ExifReader
 import com.binishmatheww.scanner.common.utils.TYPE_JPG
 import com.binishmatheww.scanner.common.utils.temporaryLocation
-import com.binishmatheww.scanner.views.listeners.*
+import com.binishmatheww.scanner.common.utils.toPdfFile
+import com.binishmatheww.scanner.models.PdfFile
 import com.itextpdf.text.Document
 import com.itextpdf.text.Image
 import com.itextpdf.text.Rectangle
@@ -48,9 +49,8 @@ class PdfEditor {
         outputFile: File,
         position: Int,
         pageSize: Rectangle,
-        imageToPdfListener: ImageToPdfListener
+        onPostExecute: (Boolean, Int, PdfFile?) -> Unit,
     ) = withContext(Dispatchers.IO){
-
         try {
             val document = Document(pageSize)
             document.setMargins(10f, 10f, 10f, 10f)
@@ -67,26 +67,27 @@ class PdfEditor {
                 (document.pageSize.height - image.scaledHeight) / 2)
             document.add(image)
             document.close()
+            withContext(Dispatchers.Main){
+                onPostExecute(true, position, outputFile.toPdfFile())
+            }
         }
         catch (e: Exception) {
             e.printStackTrace()
+            withContext(Dispatchers.Main){
+                onPostExecute(false, position, null)
+            }
         }
-
-        withContext(Dispatchers.Main){
-            imageToPdfListener.postExecute(outputFile, position)
-        }
-
     }
 
     suspend fun filterImage(
+        context: Context,
+        inputPage: PdfFile,
         filteredImage: File,
         key: Float,
-        inputPage: File,
-        filterImageListener: FilterImageListener
+        onPostExecute: (Boolean, PdfFile?) -> Unit
     ) = withContext(Dispatchers.IO){
-
-        val bitmap: Bitmap
         try {
+            val bitmap: Bitmap
             val cm = ColorMatrix(
                 floatArrayOf(
                     key, 0f, 0f, 0f, 0f, 0f,
@@ -94,234 +95,238 @@ class PdfEditor {
                     key, 0f, 0f, 0f, 0f, 0f, 1f, 0f
                 )
             )
-            val fd =
-                ParcelFileDescriptor.open(inputPage, ParcelFileDescriptor.MODE_READ_ONLY)
-            val renderer = PdfRenderer(fd)
-            val page = renderer.openPage(0)
-            bitmap = Bitmap.createBitmap(
-                page.width * 2,
-                page.height * 2,
-                Bitmap.Config.ARGB_8888
-            )
-            page.render(bitmap, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
-            val canvas = Canvas(bitmap)
-            val paint = Paint()
-            paint.colorFilter = ColorMatrixColorFilter(cm)
-            canvas.drawBitmap(bitmap, 0f, 0f, paint)
-            filteredImage.createNewFile()
-            val os: OutputStream = BufferedOutputStream(FileOutputStream(filteredImage))
-            bitmap.compress(Bitmap.CompressFormat.PNG, 100, os)
-            os.close()
+            context.contentResolver.openFileDescriptor(inputPage.uri, "r")?.use { parcelFileDescriptor ->
+                val renderer = PdfRenderer(parcelFileDescriptor)
+                val page = renderer.openPage(0)
+                bitmap = Bitmap.createBitmap(
+                    page.width * 2,
+                    page.height * 2,
+                    Bitmap.Config.ARGB_8888
+                )
+                page.render(bitmap, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
+                val canvas = Canvas(bitmap)
+                val paint = Paint()
+                paint.colorFilter = ColorMatrixColorFilter(cm)
+                canvas.drawBitmap(bitmap, 0f, 0f, paint)
+                filteredImage.createNewFile()
+                val os: OutputStream = BufferedOutputStream(FileOutputStream(filteredImage))
+                bitmap.compress(Bitmap.CompressFormat.PNG, 100, os)
+                os.close()
+                withContext(Dispatchers.Main){
+                    onPostExecute.invoke(true, filteredImage.toPdfFile())
+                }
+            }
         } catch (e: IOException) {
             e.printStackTrace()
+            withContext(Dispatchers.Main){
+                onPostExecute.invoke(false, null)
+            }
         }
-
-        withContext(Dispatchers.Main){
-            filterImageListener.postExecute(filteredImage)
-        }
-
     }
 
     suspend fun compressPdf (
-        pages: List<File>,
+        context: Context,
+        pages: List<PdfFile>,
         outputFile: File,
-        compressionListener: CompressionListener
+        onPreExecute: (Int) -> Unit,
+        onProgressUpdate: (Int) -> Unit,
+        onPostExecute: (Boolean) -> Unit,
     ) = withContext(Dispatchers.IO) {
         try {
-
-            var n: Int
-
             val document = Document()
-
             val copy = PdfSmartCopy(document, FileOutputStream(outputFile))
             document.open()
-
-            var obj : PdfObject?
-            var stream : PRStream?
-            var pdfSubType: PdfObject?
-            var image : PdfImageObject?
-            var imageBytes : ByteArray?
-            var bmp : Bitmap?
-            var scaledBitmap : Bitmap?
-            var canvas : Canvas?
-            var imgBytes : ByteArrayOutputStream?
-
             withContext(Dispatchers.Main){
-                compressionListener.preExecute(pages.size)
+                onPreExecute.invoke(pages.size)
             }
-
-            for (p in pages.indices) {
-                val reader = PdfReader(pages[p].absolutePath)
-
-                n = reader.xrefSize
-
-                for (i in 0 until n) {
-                    try {
-                        obj = reader.getPdfObject(i)
-                        if (obj == null || !obj.isStream) continue
-                        stream = obj as PRStream
-                        pdfSubType = stream.get(PdfName.SUBTYPE)
-                        if (pdfSubType.toString() == PdfName.IMAGE.toString()) {
-                            image = PdfImageObject(stream)
-                            imageBytes = image.imageAsBytes
-                            bmp = BitmapFactory.decodeByteArray(imageBytes, 0, imageBytes.size) ?: continue
-                            scaledBitmap = bmp //getResizedBitmap(bmp,100)
-                            canvas = Canvas()
-                            canvas.drawBitmap(scaledBitmap, 0f, 0f, null)
-                            imgBytes = ByteArrayOutputStream()
-                            scaledBitmap.compress(Bitmap.CompressFormat.JPEG, 50, imgBytes)
-                            stream.clear()
-                            stream.setData(imgBytes.toByteArray(), false, PRStream.BEST_COMPRESSION)
-                            stream.put(PdfName.TYPE, PdfName.XOBJECT)
-                            stream.put(PdfName.SUBTYPE, PdfName.IMAGE)
-                            stream.put(PdfName.FILTER, PdfName.DCTDECODE)
-                            stream.put(PdfName.WIDTH, PdfNumber(bmp.width))
-                            stream.put(PdfName.HEIGHT, PdfNumber(bmp.height))
-                            stream.put(PdfName.BITSPERCOMPONENT, PdfNumber(8))
-                            stream.put(PdfName.COLORSPACE, PdfName.DEVICERGB)
+            pages.forEachIndexed { index, pdfFile ->
+                context.contentResolver.openInputStream(pdfFile.uri)?.let { inputStream ->
+                    var obj : PdfObject?
+                    var stream : PRStream?
+                    var pdfSubType: PdfObject?
+                    var image : PdfImageObject?
+                    var imageBytes : ByteArray?
+                    var bmp : Bitmap?
+                    var scaledBitmap : Bitmap?
+                    var canvas : Canvas?
+                    var imgBytes : ByteArrayOutputStream?
+                    val reader = PdfReader(inputStream)
+                    val n = reader.xrefSize
+                    for (i in 0 until n) {
+                        try {
+                            obj = reader.getPdfObject(i)
+                            if (obj == null || !obj.isStream) continue
+                            stream = obj as PRStream
+                            pdfSubType = stream.get(PdfName.SUBTYPE)
+                            if (pdfSubType.toString() == PdfName.IMAGE.toString()) {
+                                image = PdfImageObject(stream)
+                                imageBytes = image.imageAsBytes
+                                bmp = BitmapFactory.decodeByteArray(imageBytes, 0, imageBytes.size) ?: continue
+                                scaledBitmap = bmp //getResizedBitmap(bmp,100)
+                                canvas = Canvas()
+                                canvas.drawBitmap(scaledBitmap, 0f, 0f, null)
+                                imgBytes = ByteArrayOutputStream()
+                                scaledBitmap.compress(Bitmap.CompressFormat.JPEG, 50, imgBytes)
+                                stream.clear()
+                                stream.setData(imgBytes.toByteArray(), false, PRStream.BEST_COMPRESSION)
+                                stream.put(PdfName.TYPE, PdfName.XOBJECT)
+                                stream.put(PdfName.SUBTYPE, PdfName.IMAGE)
+                                stream.put(PdfName.FILTER, PdfName.DCTDECODE)
+                                stream.put(PdfName.WIDTH, PdfNumber(bmp.width))
+                                stream.put(PdfName.HEIGHT, PdfNumber(bmp.height))
+                                stream.put(PdfName.BITSPERCOMPONENT, PdfNumber(8))
+                                stream.put(PdfName.COLORSPACE, PdfName.DEVICERGB)
+                            }
+                        }catch (e : Exception){
+                            e.printStackTrace()
                         }
-                    }catch (e : Exception){
-                        e.printStackTrace()
                     }
+                    reader.removeUnusedObjects()
+                    copy.addDocument(reader)
+                    reader.close()
                 }
-                reader.removeUnusedObjects()
-
-                copy.addDocument(reader)
-                reader.close()
-
                 withContext(Dispatchers.Main){
-                    compressionListener.progressUpdate(p)
+                    onProgressUpdate.invoke(index)
                 }
             }
             copy.close()
             copy.setFullCompression()
             document.close()
-
+            withContext(Dispatchers.Main){
+                onPostExecute.invoke(true)
+            }
         } catch (e: Exception) {
             e.printStackTrace()
             withContext(Dispatchers.Main){
-                compressionListener.postExecute("Could not compress ${outputFile.name}")
+                onPostExecute.invoke(false)
             }
         }
-        withContext(Dispatchers.Main){
-            compressionListener.postExecute("Compressed ${outputFile.name}")
-        }
-
-
     }
 
     suspend fun encryptPdf(
-        pages : List<File>,
+        context: Context,
+        pages : List<PdfFile>,
         outputFile : File,
         inputPassword : String,
         masterPassword : String,
-        encryptPdfListener: EncryptPdfListener
+        onPreExecute: (Int) -> Unit,
+        onProgressUpdate: (Int) -> Unit,
+        onPostExecute: (Boolean) -> Unit,
     ) = withContext(Dispatchers.IO){
-
-        withContext(Dispatchers.Main){ encryptPdfListener.onPreExecute(pages.size) }
-
+        withContext(Dispatchers.Main){
+            onPreExecute.invoke(pages.size)
+        }
         try {
             val document = Document()
             val copy = PdfSmartCopy(document, FileOutputStream(outputFile))
             copy.setFullCompression()
             copy.setEncryption(inputPassword.toByteArray(), masterPassword.toByteArray(), PdfWriter.ALLOW_PRINTING or PdfWriter.ALLOW_COPY or PdfWriter.ALLOW_MODIFY_CONTENTS, PdfWriter.ENCRYPTION_AES_128)
             document.open()
-            for (i in pages.indices) {
-                val reader = PdfReader(pages[i].absolutePath)
-                copy.addDocument(reader)
-                reader.close()
-                withContext(Dispatchers.Main){
-                    encryptPdfListener.onProgressUpdate(i+1)
+            pages.forEachIndexed { index, pdfFile ->
+                context.contentResolver.openInputStream(pdfFile.uri)?.use{ inputStream ->
+                    val reader = PdfReader(inputStream)
+                    copy.addDocument(reader)
+                    reader.close()
+                    withContext(Dispatchers.Main){
+                        onProgressUpdate.invoke(index+1)
+                    }
                 }
             }
             copy.close()
             document.close()
             withContext(Dispatchers.Main) {
-                encryptPdfListener.onPostExecute("Encrypted pdf  ${outputFile.name}")
+                onPostExecute.invoke(true)
             }
         }
         catch (e: Exception) {
             e.printStackTrace()
             withContext(Dispatchers.Main) {
-                encryptPdfListener.onPostExecute("Couldn't encrypt pdf ${outputFile.name}")
+                onPostExecute.invoke(true)
             }
         }
-
     }
 
     suspend fun mergePdf(
-        pages: List<File>,
+        context: Context,
+        pages: List<PdfFile>,
         outputFile: File,
-        mergePdfListener: MergePdfListener
+        onPreExecute: (Int) -> Unit,
+        onProgressUpdate: (Int) -> Unit,
+        onPostExecute: (Boolean) -> Unit
     ) = withContext(Dispatchers.IO){
-
-        withContext(Dispatchers.Main){ mergePdfListener.onPreExecute(pages.size) }
-
+        withContext(Dispatchers.Main){
+            onPreExecute(pages.size)
+        }
         try {
             val document = Document()
             val copy = PdfSmartCopy(document, FileOutputStream(outputFile))
             document.open()
-            for (i in pages.indices) {
-                val reader = PdfReader(pages[i].absolutePath)
-                copy.addDocument(reader)
-                reader.close()
-                withContext(Dispatchers.Main){
-                    mergePdfListener.onProgressUpdate(i+1)
+            pages.forEachIndexed { index, pdfFile ->
+                context.contentResolver.openInputStream(pdfFile.uri)?.use { inputStream ->
+                    val reader = PdfReader(inputStream)
+                    copy.addDocument(reader)
+                    reader.close()
+                    withContext(Dispatchers.Main){
+                        onProgressUpdate(index+1)
+                    }
                 }
             }
             copy.close()
             copy.setFullCompression()
             document.close()
             withContext(Dispatchers.Main) {
-                mergePdfListener.onPostExecute("Exported pdf ${outputFile.name}", outputFile.absolutePath)
+                onPostExecute(true)
             }
         }
         catch (e: Exception) {
             e.printStackTrace()
             withContext(Dispatchers.Main) {
-                mergePdfListener.onPostExecute("Couldn't export pdf ${outputFile.name}", outputFile.absolutePath)
+                onPostExecute(false)
             }
         }
-
     }
 
     suspend fun extractPdfPages(
         context: Context,
         sourcePdfPath: String,
-        extractionListener: PdfPageExtractorListener
-    ){
-
-        val reader = PdfReader(sourcePdfPath)
-        val number  = reader.numberOfPages
-        extractionListener.preExecute(number)
-        extract(context,number,reader,extractionListener)
-
-    }
+        onPreExecute: (Int) -> Unit,
+        onProgressUpdate: (Int) -> Unit,
+        onPostExecute: (Boolean, List<PdfFile>) -> Unit,
+    ) = extract(
+        context = context,
+        reader = PdfReader(sourcePdfPath),
+        onPreExecute = onPreExecute,
+        onProgressUpdate = onProgressUpdate,
+        onPostExecute = onPostExecute
+    )
 
     suspend fun extractPdfPages(
         context: Context,
         bytes : ByteArray,
-        extractionListener: PdfPageExtractorListener
-    ){
-
-        val reader = PdfReader(bytes)
-        val number  = reader.numberOfPages
-        extractionListener.preExecute(number)
-        extract(context,number,reader,extractionListener)
-
-    }
+        onPreExecute: (Int) -> Unit,
+        onProgressUpdate: (Int) -> Unit,
+        onPostExecute: (Boolean, List<PdfFile>) -> Unit,
+    ) = extract(
+        context = context,
+        reader = PdfReader(bytes),
+        onPreExecute = onPreExecute,
+        onProgressUpdate = onProgressUpdate,
+        onPostExecute = onPostExecute
+    )
 
     private suspend fun extract(
         context: Context,
-        number : Int,
         reader : PdfReader,
-        extractionListener: PdfPageExtractorListener
+        onPreExecute: (Int) -> Unit,
+        onProgressUpdate: (Int) -> Unit,
+        onPostExecute: (Boolean, List<PdfFile>) -> Unit,
     ) = withContext(Dispatchers.IO){
-
-        val pages = ArrayList<File>()
-
+        val pages = ArrayList<PdfFile>()
         try {
-
+            val number = reader.numberOfPages
+            withContext(Dispatchers.Main){
+                onPreExecute.invoke(number)
+            }
             for (i in 1..number) {
                 val document = Document(reader.getPageSizeWithRotation(i))
                 val pageFile = File(
@@ -339,83 +344,86 @@ class PdfEditor {
                 writer.addPage(page)
                 document.close()
                 writer.close()
-                pages.add(pageFile)
+                pages.add(pageFile.toPdfFile())
                 withContext(Dispatchers.Main){
-                    extractionListener.progressUpdate(i+1)
+                    onProgressUpdate.invoke(i+1)
                 }
             }
             reader.close()
-
+            withContext(Dispatchers.Main){
+                onPostExecute.invoke(true, pages)
+            }
         }
         catch (e: Exception) {
-            Log.wtf("ppe",e.message)
+            e.printStackTrace()
+            withContext(Dispatchers.Main){
+                onPostExecute.invoke(false, emptyList())
+            }
         }
-        withContext(Dispatchers.Main){
-            extractionListener.completed(pages)
-        }
-
     }
 
     suspend fun convertPdfToImage(
         context: Context,
         name : String,
         outputDir : DocumentFile,
-        pages: List<File>,
-        listener: PdfToImageListener
+        pages: List<PdfFile>,
+        onPreExecute: (Int) -> Unit,
+        onProgressUpdate: (Int) -> Unit,
+        onPostExecute: (Boolean, List<Uri>) -> Unit,
     ) = withContext(Dispatchers.IO){
-
-        listener.preExecute(pages.size)
-
+        withContext(Dispatchers.Main){
+            onPreExecute.invoke(pages.size)
+        }
+        val images = arrayListOf<Uri>()
         if (pages.isNotEmpty()) {
             val root = outputDir.createDirectory(name)
             try {
-                for (i in pages.indices) {
-                    val file = File(pages[i].absolutePath)
-                    val renderer = PdfRenderer(ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_ONLY))
-                    val page = renderer.openPage(0)
-                    val bitmap = Bitmap.createBitmap(
-                        page.width * 2,
-                        page.height * 2,
-                        Bitmap.Config.ARGB_8888
-                    )
-                    val canvas = Canvas(bitmap)
-                    canvas.drawColor(Color.WHITE)
-                    canvas.drawBitmap(bitmap, 0f, 0f, null)
-                    page.render(bitmap, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
-                    try {
-                        val image = root?.createFile(TYPE_JPG,Constants.PAGE_PREFIX + (i + 1) + Constants.JPG_EXTENSION)
-                        val os: OutputStream = BufferedOutputStream(context.contentResolver.openOutputStream(image!!.uri))
-                        bitmap.compress(Bitmap.CompressFormat.JPEG, 100, os)
-                        os.close()
-                    } catch (e: IOException) {
-                        e.printStackTrace()
-                    } catch (e: SecurityException) {
-                        e.printStackTrace()
+                pages.forEachIndexed { index, pdfFile ->
+                    context.contentResolver.openFileDescriptor(pdfFile.uri,"r")?.use { parcelFileDescriptor ->
+                        val renderer = PdfRenderer(parcelFileDescriptor)
+                        val page = renderer.openPage(0)
+                        val bitmap = Bitmap.createBitmap(
+                            page.width * 2,
+                            page.height * 2,
+                            Bitmap.Config.ARGB_8888
+                        )
+                        val canvas = Canvas(bitmap)
+                        canvas.drawColor(Color.WHITE)
+                        canvas.drawBitmap(bitmap, 0f, 0f, null)
+                        page.render(bitmap, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
+                        try {
+                            val imageFile = root?.createFile(TYPE_JPG,Constants.PAGE_PREFIX + (index + 1) + Constants.JPG_EXTENSION) ?: return@use
+                            val os: OutputStream = BufferedOutputStream(context.contentResolver.openOutputStream(imageFile.uri))
+                            bitmap.compress(Bitmap.CompressFormat.JPEG, 100, os)
+                            os.close()
+                            images.add(imageFile.uri)
+                        } catch (e: IOException) {
+                            e.printStackTrace()
+                        } catch (e: SecurityException) {
+                            e.printStackTrace()
+                        }
+                        page.close()
+                        withContext(Dispatchers.Main){
+                            onProgressUpdate.invoke(index)
+                        }
                     }
-                    page.close()
-                    withContext(Dispatchers.Main){
-                        listener.progressUpdate(i)
-                    }
+                }
+                withContext(Dispatchers.Main){
+                    onPostExecute.invoke(true, images)
                 }
             } catch (e: Exception) {
                 e.printStackTrace()
                 withContext(Dispatchers.Main){
-                    listener.postExecute("Failed converting  these pages into images")
+                    onPostExecute.invoke(false, emptyList())
                 }
             }
         }
-
-        withContext(Dispatchers.Main){
-            listener.postExecute("Successfully converted these pages into images")
-        }
-
     }
 
     suspend fun cropImage(
         bitmap: Bitmap,
-        perspectiveListener: PerspectiveCorrectionListener
+        onPostExecute: (Boolean, FloatArray) -> Unit,
     ) = withContext(Dispatchers.IO){
-
         val imageWidth = bitmap.width
         val imageHeight = bitmap.height
         var topLeftX: Float
@@ -510,10 +518,7 @@ class PdfEditor {
                     pixelB = Color.blue(pixel)
                     if (!this.isActive) {
                         break
-                    } else if (pixelR in min..max && abs(pixelG - pixelR) <= 10 && abs(
-                            pixelB - pixelR
-                        ) <= 10
-                    ) {
+                    } else if (pixelR in min..max && abs(pixelG - pixelR) <= 10 && abs(pixelB - pixelR) <= 10) {
                         bottomRightX = x.toFloat()
                         bottomRightY = y.toFloat()
                         break
@@ -526,48 +531,48 @@ class PdfEditor {
                 bottomRightX, bottomRightY,
                 topRightX, topRightY
             )
-
             withContext(Dispatchers.Main){
-                perspectiveListener.onPostExecute(src)
+                onPostExecute.invoke(true, src)
             }
-
         }
         catch (e: Exception) {
             e.printStackTrace()
             withContext(Dispatchers.Main){
-                perspectiveListener.onPostExecute(src)
+                onPostExecute.invoke(false, src)
             }
         }
-
     }
 
     suspend fun rotatePdf(
-        page: File,
+        context: Context,
+        page: PdfFile,
         position: Int,
         rotation: Int,
         outputFile: File,
-        rotatePageListener: RotatePageListener
+        onPostExecute: (Boolean, Int, PdfFile?) -> Unit,
     ) = withContext(Dispatchers.IO){
-
         try {
-            val reader = PdfReader(page.absolutePath)
-            val n = reader.numberOfPages
-            var pageDict: PdfDictionary
-            for (i in 1..n) {
-                pageDict = reader.getPageN(i)
-                pageDict.put(PdfName.ROTATE, PdfNumber(reader.getPageRotation(i) + rotation))
+            context.contentResolver.openInputStream(page.uri)?.use { inputStream ->
+                val reader = PdfReader(inputStream)
+                val n = reader.numberOfPages
+                var pageDict: PdfDictionary
+                for (i in 1..n) {
+                    pageDict = reader.getPageN(i)
+                    pageDict.put(PdfName.ROTATE, PdfNumber(reader.getPageRotation(i) + rotation))
+                }
+                val stamper = PdfStamper(reader, FileOutputStream(outputFile))
+                stamper.close()
+                reader.close()
             }
-            val stamper = PdfStamper(reader, FileOutputStream(outputFile))
-            stamper.close()
-            reader.close()
+            withContext(Dispatchers.Main){
+                onPostExecute.invoke(true, position, outputFile.toPdfFile())
+            }
         } catch (e: Exception) {
             e.printStackTrace()
+            withContext(Dispatchers.Main){
+                onPostExecute.invoke(false, position, outputFile.toPdfFile())
+            }
         }
-
-        withContext(Dispatchers.Main){
-            rotatePageListener.postExecute(position, outputFile)
-        }
-
     }
 
 }
