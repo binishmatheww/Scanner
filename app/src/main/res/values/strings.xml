@@ -17,6 +17,7 @@
     <string name="Rendering">Rendering</string>
     <string name="ConvertingPdfToImages">Converting pdf to images</string>
     <string name="EnterANumber">Enter a number</string>
+    <string name="NeitherAPdfFileNorATextFile">Neither a Pdf file nor a Text file</string>
     <string name="ThisPdfIsPasswordProtected">This pdf is password protected</string>
 
 </resources>
