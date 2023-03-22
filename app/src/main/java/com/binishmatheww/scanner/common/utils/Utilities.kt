@@ -44,8 +44,9 @@ import kotlin.math.abs
 const val masterPassWord = "DoWeReallyNeedPasswords"
 
 const val TYPE_PDF = "application/pdf"
-const val TYPE_JPG = "image/jpg"
-const val TYPE_TXT = "text/plain"
+const val TYPE_ANY_IMAGE = "image/*"
+const val TYPE_JPG_IMAGE = "image/jpg"
+const val TYPE_PLAIN_TXT = "text/plain"
 
 
 fun Any.log(

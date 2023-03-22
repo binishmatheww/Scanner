@@ -7,7 +7,7 @@ import android.net.Uri
 import android.util.Log
 import androidx.documentfile.provider.DocumentFile
 import com.binishmatheww.scanner.common.utils.ExifReader
-import com.binishmatheww.scanner.common.utils.TYPE_JPG
+import com.binishmatheww.scanner.common.utils.TYPE_JPG_IMAGE
 import com.binishmatheww.scanner.common.utils.temporaryLocation
 import com.binishmatheww.scanner.common.utils.toPdfFile
 import com.binishmatheww.scanner.models.PdfFile
@@ -392,7 +392,7 @@ class PdfEditor {
                         canvas.drawBitmap(bitmap, 0f, 0f, null)
                         page.render(bitmap, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
                         try {
-                            val imageFile = root?.createFile(TYPE_JPG,Constants.PAGE_PREFIX + (index + 1) + Constants.JPG_EXTENSION) ?: return@use
+                            val imageFile = root?.createFile(TYPE_JPG_IMAGE,Constants.PAGE_PREFIX + (index + 1) + Constants.JPG_EXTENSION) ?: return@use
                             val os: OutputStream = BufferedOutputStream(context.contentResolver.openOutputStream(imageFile.uri))
                             bitmap.compress(Bitmap.CompressFormat.JPEG, 100, os)
                             os.close()
