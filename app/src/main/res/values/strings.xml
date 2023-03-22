@@ -10,5 +10,13 @@
     <string name="Down">Down</string>
     <string name="Delete">Delete</string>
     <string name="Page">Page</string>
+    <string name="SelectOneOrMoreImages">Select one or more images</string>
+    <string name="Exporting">Exporting</string>
+    <string name="Compressing">Compressing</string>
+    <string name="Encrypting">Encrypting</string>
+    <string name="Rendering">Rendering</string>
+    <string name="ConvertingPdfToImages">Converting pdf to images</string>
+    <string name="EnterANumber">Enter a number</string>
+    <string name="ThisPdfIsPasswordProtected">This pdf is password protected</string>
 
 </resources>
