@@ -3,7 +3,6 @@ package com.binishmatheww.scanner.views.composables
 import android.graphics.ColorMatrix
 import android.graphics.ColorMatrixColorFilter
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.wrapContentSize
@@ -19,6 +18,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.constraintlayout.compose.ConstraintLayout
 import com.binishmatheww.scanner.R
+import com.binishmatheww.scanner.common.utils.noRippleClickable
 
 @Composable
 fun PdfPageEditingToolsLayout(
@@ -47,9 +47,9 @@ fun PdfPageEditingToolsLayout(
         Column(
             modifier = Modifier
                 .constrainAs(reorderPageConstraint) {
-                    end.linkTo(parent.end, 4.dp)
+                    end.linkTo(parent.end, 2.dp)
                     top.linkTo(parent.top)
-                    bottom.linkTo(parent.bottom)
+                    bottom.linkTo(pageFilterConstraint.top, 2.dp)
                 }
                 .wrapContentSize(),
             horizontalAlignment = Alignment.CenterHorizontally
@@ -58,7 +58,7 @@ fun PdfPageEditingToolsLayout(
             Image(
                 modifier = Modifier
                     .size(96.dp)
-                    .clickable {
+                    .noRippleClickable {
                         onPageUp.invoke(index)
                     },
                 painter = painterResource(id = R.drawable.reordup),
@@ -68,7 +68,7 @@ fun PdfPageEditingToolsLayout(
 
             Text(
                 modifier = Modifier
-                    .clickable {
+                    .noRippleClickable {
                         onPageDelete.invoke(index)
                     },
                 text = LocalContext.current.getString(R.string.Delete),
@@ -78,7 +78,7 @@ fun PdfPageEditingToolsLayout(
             Image(
                 modifier = Modifier
                     .size(96.dp)
-                    .clickable {
+                    .noRippleClickable {
                         onPageDown.invoke(index)
                     },
                 painter = painterResource(id = R.drawable.reorddown),
@@ -92,7 +92,7 @@ fun PdfPageEditingToolsLayout(
             modifier = Modifier.constrainAs(pageFilterConstraint){
                 start.linkTo(parent.start, 4.dp)
                 end.linkTo(parent.end, 4.dp)
-                bottom.linkTo(pageNumberConstraint.top, 4.dp)
+                bottom.linkTo(pageNumberConstraint.top, 2.dp)
             },
             value = filterSliderValue,
             valueRange = 0f..200f,
@@ -127,7 +127,7 @@ fun PdfPageEditingToolsLayout(
                 .constrainAs(pageNumberConstraint) {
                     start.linkTo(parent.start)
                     end.linkTo(parent.end)
-                    bottom.linkTo(parent.bottom, 8.dp)
+                    bottom.linkTo(parent.bottom, 2.dp)
                 }
                 .wrapContentSize(),
             text = "Page ${index + 1}",
