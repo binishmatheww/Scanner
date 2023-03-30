@@ -129,7 +129,7 @@ class PdfEditor {
         pages: List<PdfFile>,
         outputFile: File,
         onPreExecute: (Int) -> Unit,
-        onProgressUpdate: (Int) -> Unit,
+        onProgressUpdate: (Int, Int) -> Unit,
         onPostExecute: (Boolean) -> Unit,
     ) = withContext(Dispatchers.IO) {
         try {
@@ -140,6 +140,12 @@ class PdfEditor {
                 onPreExecute.invoke(pages.size)
             }
             pages.forEachIndexed { index, pdfFile ->
+                if(isActive.not()){
+                    withContext(Dispatchers.Main){
+                        onPostExecute.invoke(false)
+                    }
+                    return@withContext
+                }
                 context.contentResolver.openInputStream(pdfFile.uri)?.let { inputStream ->
                     var obj : PdfObject?
                     var stream : PRStream?
@@ -186,7 +192,7 @@ class PdfEditor {
                     reader.close()
                 }
                 withContext(Dispatchers.Main){
-                    onProgressUpdate.invoke(index)
+                    onProgressUpdate.invoke(index, pages.size)
                 }
             }
             copy.close()
@@ -210,7 +216,7 @@ class PdfEditor {
         inputPassword : String,
         masterPassword : String,
         onPreExecute: (Int) -> Unit,
-        onProgressUpdate: (Int) -> Unit,
+        onProgressUpdate: (Int, Int) -> Unit,
         onPostExecute: (Boolean) -> Unit,
     ) = withContext(Dispatchers.IO){
         withContext(Dispatchers.Main){
@@ -223,12 +229,18 @@ class PdfEditor {
             copy.setEncryption(inputPassword.toByteArray(), masterPassword.toByteArray(), PdfWriter.ALLOW_PRINTING or PdfWriter.ALLOW_COPY or PdfWriter.ALLOW_MODIFY_CONTENTS, PdfWriter.ENCRYPTION_AES_128)
             document.open()
             pages.forEachIndexed { index, pdfFile ->
+                if(isActive.not()){
+                    withContext(Dispatchers.Main){
+                        onPostExecute.invoke(false)
+                    }
+                    return@withContext
+                }
                 context.contentResolver.openInputStream(pdfFile.uri)?.use{ inputStream ->
                     val reader = PdfReader(inputStream)
                     copy.addDocument(reader)
                     reader.close()
                     withContext(Dispatchers.Main){
-                        onProgressUpdate.invoke(index+1)
+                        onProgressUpdate.invoke(index+1, pages.size)
                     }
                 }
             }
@@ -241,7 +253,7 @@ class PdfEditor {
         catch (e: Exception) {
             e.printStackTrace()
             withContext(Dispatchers.Main) {
-                onPostExecute.invoke(true)
+                onPostExecute.invoke(false)
             }
         }
     }
@@ -251,7 +263,7 @@ class PdfEditor {
         pages: List<PdfFile>,
         outputFile: File,
         onPreExecute: (Int) -> Unit,
-        onProgressUpdate: (Int) -> Unit,
+        onProgressUpdate: (Int, Int) -> Unit,
         onPostExecute: (Boolean) -> Unit
     ) = withContext(Dispatchers.IO){
         withContext(Dispatchers.Main){
@@ -262,12 +274,18 @@ class PdfEditor {
             val copy = PdfSmartCopy(document, FileOutputStream(outputFile))
             document.open()
             pages.forEachIndexed { index, pdfFile ->
+                if(isActive.not()){
+                    withContext(Dispatchers.Main){
+                        onPostExecute.invoke(false)
+                    }
+                    return@withContext
+                }
                 context.contentResolver.openInputStream(pdfFile.uri)?.use { inputStream ->
                     val reader = PdfReader(inputStream)
                     copy.addDocument(reader)
                     reader.close()
                     withContext(Dispatchers.Main){
-                        onProgressUpdate(index+1)
+                        onProgressUpdate(index+1, pages.size)
                     }
                 }
             }
@@ -290,7 +308,7 @@ class PdfEditor {
         context: Context,
         sourcePdfPath: String,
         onPreExecute: (Int) -> Unit,
-        onProgressUpdate: (Int) -> Unit,
+        onProgressUpdate: (Int, Int) -> Unit,
         onPostExecute: (Boolean, List<PdfFile>) -> Unit,
     ) = extract(
         context = context,
@@ -304,7 +322,7 @@ class PdfEditor {
         context: Context,
         bytes : ByteArray,
         onPreExecute: (Int) -> Unit,
-        onProgressUpdate: (Int) -> Unit,
+        onProgressUpdate: (Int, Int) -> Unit,
         onPostExecute: (Boolean, List<PdfFile>) -> Unit,
     ) = extract(
         context = context,
@@ -318,7 +336,7 @@ class PdfEditor {
         context: Context,
         reader : PdfReader,
         onPreExecute: (Int) -> Unit,
-        onProgressUpdate: (Int) -> Unit,
+        onProgressUpdate: (Int, Int) -> Unit,
         onPostExecute: (Boolean, List<PdfFile>) -> Unit,
     ) = withContext(Dispatchers.IO){
         val pages = ArrayList<PdfFile>()
@@ -328,6 +346,12 @@ class PdfEditor {
                 onPreExecute.invoke(number)
             }
             for (i in 1..number) {
+                if(isActive.not()){
+                    withContext(Dispatchers.Main){
+                        onPostExecute.invoke(false, emptyList())
+                    }
+                    break
+                }
                 val document = Document(reader.getPageSizeWithRotation(i))
                 val pageFile = File(
                     context.temporaryLocation(),
@@ -346,7 +370,7 @@ class PdfEditor {
                 writer.close()
                 pages.add(pageFile.toPdfFile())
                 withContext(Dispatchers.Main){
-                    onProgressUpdate.invoke(i+1)
+                    onProgressUpdate.invoke(i+1, number)
                 }
             }
             reader.close()
@@ -368,7 +392,7 @@ class PdfEditor {
         outputDir : DocumentFile,
         pages: List<PdfFile>,
         onPreExecute: (Int) -> Unit,
-        onProgressUpdate: (Int) -> Unit,
+        onProgressUpdate: (Int, Int) -> Unit,
         onPostExecute: (Boolean, List<Uri>) -> Unit,
     ) = withContext(Dispatchers.IO){
         withContext(Dispatchers.Main){
@@ -379,6 +403,12 @@ class PdfEditor {
             val root = outputDir.createDirectory(name)
             try {
                 pages.forEachIndexed { index, pdfFile ->
+                    if(isActive.not()){
+                        withContext(Dispatchers.Main){
+                            onPostExecute.invoke(false, emptyList())
+                        }
+                        return@withContext
+                    }
                     context.contentResolver.openFileDescriptor(pdfFile.uri,"r")?.use { parcelFileDescriptor ->
                         val renderer = PdfRenderer(parcelFileDescriptor)
                         val page = renderer.openPage(0)
@@ -404,7 +434,7 @@ class PdfEditor {
                         }
                         page.close()
                         withContext(Dispatchers.Main){
-                            onProgressUpdate.invoke(index)
+                            onProgressUpdate.invoke(index, pages.size)
                         }
                     }
                 }
@@ -457,6 +487,12 @@ class PdfEditor {
             var pixelG: Int
             var pixelB: Int
             for (y in imageHeight / 2 downTo 1) {
+                if(isActive.not()){
+                    withContext(Dispatchers.Main){
+                        onPostExecute.invoke(false, src)
+                    }
+                    return@withContext
+                }
                 for (x in imageWidth / 2 downTo 1) {
                     pixel = imageToBeProcessed.getPixel(x, y)
                     pixelR = Color.red(pixel)
@@ -480,8 +516,11 @@ class PdfEditor {
                     pixelR = Color.red(pixel)
                     pixelG = Color.green(pixel)
                     pixelB = Color.blue(pixel)
-                    if (!this.isActive) {
-                        break
+                    if(isActive.not()){
+                        withContext(Dispatchers.Main){
+                            onPostExecute.invoke(false, src)
+                        }
+                        return@withContext
                     } else if (pixelR in min..max && abs(pixelG - pixelR) <= 10 && abs(
                             pixelB - pixelR
                         ) <= 10
@@ -498,8 +537,11 @@ class PdfEditor {
                     pixelR = Color.red(pixel)
                     pixelG = Color.green(pixel)
                     pixelB = Color.blue(pixel)
-                    if (!this.isActive) {
-                        break
+                    if(isActive.not()){
+                        withContext(Dispatchers.Main){
+                            onPostExecute.invoke(false, src)
+                        }
+                        return@withContext
                     } else if (pixelR in min..max && abs(pixelG - pixelR) <= 10 && abs(
                             pixelB - pixelR
                         ) <= 10
@@ -516,8 +558,11 @@ class PdfEditor {
                     pixelR = Color.red(pixel)
                     pixelG = Color.green(pixel)
                     pixelB = Color.blue(pixel)
-                    if (!this.isActive) {
-                        break
+                    if(isActive.not()){
+                        withContext(Dispatchers.Main){
+                            onPostExecute.invoke(false, src)
+                        }
+                        return@withContext
                     } else if (pixelR in min..max && abs(pixelG - pixelR) <= 10 && abs(pixelB - pixelR) <= 10) {
                         bottomRightX = x.toFloat()
                         bottomRightY = y.toFloat()
@@ -557,6 +602,12 @@ class PdfEditor {
                 val n = reader.numberOfPages
                 var pageDict: PdfDictionary
                 for (i in 1..n) {
+                    if(isActive.not()){
+                        withContext(Dispatchers.Main){
+                            onPostExecute.invoke(false, position, outputFile.toPdfFile())
+                        }
+                        break
+                    }
                     pageDict = reader.getPageN(i)
                     pageDict.put(PdfName.ROTATE, PdfNumber(reader.getPageRotation(i) + rotation))
                 }
