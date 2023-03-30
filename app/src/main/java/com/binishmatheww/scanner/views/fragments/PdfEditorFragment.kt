@@ -34,12 +34,10 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.core.net.toFile
-import androidx.documentfile.provider.DocumentFile
 import androidx.fragment.app.DialogFragment
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.setFragmentResultListener
 import androidx.fragment.app.viewModels
-import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.lifecycleScope
 import com.binishmatheww.scanner.R
 import com.binishmatheww.scanner.common.PdfEditor
@@ -48,16 +46,15 @@ import com.binishmatheww.scanner.common.utils.*
 import com.binishmatheww.scanner.models.PdfFile
 import com.binishmatheww.scanner.viewmodels.PdfEditorViewModel
 import com.binishmatheww.scanner.views.composables.PdfPageLayout
-import com.binishmatheww.scanner.views.fragments.dialogs.EditorExtraDialog
-import com.binishmatheww.scanner.views.fragments.dialogs.EncryptPdfDialog
-import com.binishmatheww.scanner.views.fragments.dialogs.ProgressDialog
-import com.binishmatheww.scanner.views.fragments.dialogs.SplitPdfDialog
+import com.binishmatheww.scanner.views.composables.dialogs.EditorExtraDialog
+import com.binishmatheww.scanner.views.composables.dialogs.EncryptPdfDialog
+import com.binishmatheww.scanner.views.composables.dialogs.ProgressDialog
+import com.binishmatheww.scanner.views.composables.dialogs.SplitPdfDialog
 import com.binishmatheww.scanner.views.listeners.*
 import com.itextpdf.text.Document
 import com.itextpdf.text.Element
 import com.itextpdf.text.PageSize
 import com.itextpdf.text.Paragraph
-import com.itextpdf.text.exceptions.BadPasswordException
 import com.itextpdf.text.pdf.PdfCopy
 import com.itextpdf.text.pdf.PdfReader
 import com.itextpdf.text.pdf.PdfWriter
@@ -90,8 +87,6 @@ class PdfEditorFragment : Fragment() {
     private lateinit var addImageLauncher : ActivityResultLauncher<Intent>
     private lateinit var filePickerLauncher : ActivityResultLauncher<Intent>
     private lateinit var directoryPickerLauncher : ActivityResultLauncher<Intent>
-
-    private var progressLiveData = MutableLiveData<Int>()
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         arguments?.getBundle("images")?.serializable<ArrayList<PdfFile>>("pages")?.let{ pdfFiles ->
@@ -149,12 +144,12 @@ class PdfEditorFragment : Fragment() {
                 ?.contentResolver
                 ?.openInputStream(Uri.parse(it))
                 ?.use { inputStream ->
-                    pageRenderer(inputStream.readBytes())
+                    pdfEditorViewModel.renderPages(inputStream.readBytes())
                     arguments = null
                 }
         }
         arguments?.getString("file")?.let {
-            pageRenderer(it)
+            pdfEditorViewModel.renderPages(it)
             arguments = null
         }
         setFragmentResultListener("processedImage") { _: String, bundle: Bundle ->
@@ -378,7 +373,7 @@ class PdfEditorFragment : Fragment() {
                             when {
                                 contentResolver.getType(uri) == TYPE_PDF -> {
                                     contentResolver.openInputStream(uri)?.use { inputStream ->
-                                        pageRenderer(inputStream.readBytes())
+                                        pdfEditorViewModel.renderPages(inputStream.readBytes())
                                     }
                                 }
                                 contentResolver.getType(uri) == TYPE_PLAIN_TXT -> {
@@ -402,7 +397,7 @@ class PdfEditorFragment : Fragment() {
                                         reader.close()
                                         inputStream.close()
                                         document.close()
-                                        pageRenderer(name)
+                                        pdfEditorViewModel.renderPages(name)
                                     }
                                 }
                                 else -> Toast.makeText(activity,activity.getString(R.string.NeitherAPdfFileNorATextFile),Toast.LENGTH_SHORT).show()
@@ -415,31 +410,7 @@ class PdfEditorFragment : Fragment() {
         directoryPickerLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()){ result ->
             if(result.resultCode == RESULT_OK){
                 result?.data?.data?.also { uri ->
-                    val outputDir = DocumentFile.fromTreeUri(activity ?: return@also, uri)
-                    outputDir?.let {
-                        lifecycleScope.launch {
-                            pdfEditorViewModel.pdfEditor.convertPdfToImage(
-                                context = activity ?: return@launch,
-                                name = timeStamp,
-                                outputDir = outputDir,
-                                pages = pdfEditorViewModel.pages.toList(),
-                                onPreExecute = { count ->
-                                    progressDialog(activity?.getString(R.string.ConvertingPdfToImages).toString(),count)
-                                },
-                                onProgressUpdate = { progress ->
-                                    progressLiveData.value = progress
-                                },
-                                onPostExecute = onPostExecute@ { isSuccessful, _ ->
-                                    dialog?.dismiss()
-                                    Toast.makeText(
-                                        activity ?: return@onPostExecute,
-                                        if(isSuccessful) "Done" else "Failed",
-                                        Toast.LENGTH_SHORT
-                                    ).show()
-                                },
-                            )
-                        }
-                    }
+                    pdfEditorViewModel.convertPdfToImage(outputDirUri = uri)
                 }
             }
         }
@@ -456,7 +427,10 @@ class PdfEditorFragment : Fragment() {
             val context = LocalContext.current
             val pdfEditorScope = rememberCoroutineScope()
             var isEditing by rememberSaveable { mutableStateOf(false) }
-            var shouldShowEditorExtraDialog by pdfEditorViewModel.shouldShowEditorExtraDialog
+            var shouldShowEditorExtraDialog by remember { pdfEditorViewModel.shouldShowEditorExtraDialog }
+            var shouldShowProgressBarDialog by remember { pdfEditorViewModel.shouldShowProgressBarDialog }
+            var shouldShowEncryptPdfDialog by remember { pdfEditorViewModel.shouldShowEncryptPdfDialog }
+            var shouldShowSplitPdfDialog by remember { pdfEditorViewModel.shouldShowSplitPdfDialog }
             LaunchedEffect(
                 key1 = isEditing,
                 block = {
@@ -583,9 +557,7 @@ class PdfEditorFragment : Fragment() {
                 )
 
             }
-
             if(shouldShowEditorExtraDialog){
-
                 EditorExtraDialog(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -598,42 +570,100 @@ class PdfEditorFragment : Fragment() {
                             "addPdf" -> addPdf()
                             "addImages" -> addImages()
                             "addText" -> addTxt()
-                            "exportPdf" -> exportPdf(pdfEditorViewModel.pages.toList())
-                            "splitPdf" ->  splitPdf()
+                            "exportPdf" -> pdfEditorViewModel.exportPdf(pages = pdfEditorViewModel.pages.toList())
+                            "splitPdf" ->  pdfEditorViewModel.shouldShowSplitPdfDialog.value = true
                             "pdfToImages" -> pdfToImages()
-                            "compressPdf" -> compressPdf()
-                            "encryptPdf" -> encryptPdf()
+                            "compressPdf" -> pdfEditorViewModel.compressPdf()
+                            "encryptPdf" -> pdfEditorViewModel.shouldShowEncryptPdfDialog.value = true
                         }
                     },
                     onDismissRequest = {
                         shouldShowEditorExtraDialog = false
                     }
                 )
-
             }
-
+            if(shouldShowProgressBarDialog){
+                ProgressDialog(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .defaultMinSize(
+                            minHeight = 200.dp
+                        )
+                        .wrapContentHeight()
+                        .padding(
+                            all = 2.dp
+                        ),
+                    title = pdfEditorViewModel.progressBarDialogTitle.value,
+                    progress = pdfEditorViewModel.progress.value,
+                    onDismissRequest = {
+                        shouldShowProgressBarDialog = false
+                        pdfEditorViewModel.cancelCurrentJob()
+                        pdfEditorViewModel.progress.value = 0f
+                    }
+                )
+            }
+            if(shouldShowEncryptPdfDialog){
+                EncryptPdfDialog(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .defaultMinSize(
+                            minHeight = 200.dp
+                        )
+                        .wrapContentHeight()
+                        .padding(
+                            all = 2.dp
+                        ),
+                    onDismissRequest = {
+                        pdfEditorViewModel.password.value = ""
+                        shouldShowEncryptPdfDialog = false
+                    },
+                    password = pdfEditorViewModel.password.value,
+                    onPasswordConfirmed = {
+                        pdfEditorViewModel.password.value = it
+                        shouldShowEncryptPdfDialog = false
+                        pdfEditorViewModel.encryptPdf(inputPassword = it)
+                    }
+                )
+            }
+            if(shouldShowSplitPdfDialog){
+                SplitPdfDialog(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .defaultMinSize(
+                            minHeight = 200.dp
+                        )
+                        .wrapContentHeight()
+                        .padding(
+                            all = 2.dp
+                        ),
+                    onDismissRequest = {
+                        pdfEditorViewModel.splitAtPosition.value = 0
+                        shouldShowSplitPdfDialog = false
+                    },
+                    splitIndex = pdfEditorViewModel.password.value,
+                    onPageConfirmed = {
+                        try {
+                            pdfEditorViewModel.splitAtPosition.value = it.toInt()
+                            if (pdfEditorViewModel.splitAtPosition.value in 1..pdfEditorViewModel.pages.lastIndex) {
+                                shouldShowSplitPdfDialog = false
+                                pdfEditorViewModel.splitPdf(
+                                    firstPdfPages = pdfEditorViewModel.pages.take(pdfEditorViewModel.splitAtPosition.value),
+                                    secondPdfPages = pdfEditorViewModel.pages.takeLast(pdfEditorViewModel.pages.size-pdfEditorViewModel.splitAtPosition.value)
+                                )
+                                pdfEditorViewModel.splitAtPosition.value = 0
+                            } else {
+                                pdfEditorViewModel.splitAtPosition.value = 0
+                                Toast.makeText(activity ?: return@SplitPdfDialog, activity?.getString(R.string.EnterANumberBetween1AndLastIndex).toString().replace("{lastIndex}",(pdfEditorViewModel.pages.size - 1).toString()), Toast.LENGTH_SHORT).show()
+                            }
+                        } catch (e: NumberFormatException) {
+                            pdfEditorViewModel.splitAtPosition.value = 0
+                            Toast.makeText(activity ?: return@SplitPdfDialog, activity?.getString(R.string.EnterANumber).toString(), Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                )
+            }
         }
 
-    }
-
-
-
-    private fun progressDialog(title: String,max : Int){
-        dialog?.dismiss()
-        progressLiveData.value = 0
-        dialog = ProgressDialog(title,progressLiveData,max,object : OnDialogButtonClickListener {
-            override fun onDialogConfirm(result: Any) {
-
-            }
-
-            override fun onDialogCancel() {
-                progressLiveData.value = 0
-            }
-
-        })
-        activity?.supportFragmentManager?.let {
-            dialog?.show(it, "progressDialog")
-        }
     }
 
     // Function to add images
@@ -654,248 +684,9 @@ class PdfEditorFragment : Fragment() {
         openFilePicker(TYPE_PLAIN_TXT, filePickerLauncher)
     }
 
-    // Function to export a pdf file
-    private fun exportPdf(toExport: List<PdfFile>) {
-
-        lifecycleScope.launch {
-
-            pdfEditorViewModel.pdfEditor.mergePdf(
-                context = activity ?: return@launch,
-                pages = toExport,
-                outputFile = activity?.run { File(storageLocation().absolutePath.plus(File.separator).plus(timeStamp).plus(PdfEditor.Constants.PDF_EXTENSION)) } ?: return@launch,
-                onPreExecute = { count ->
-                    progressDialog(activity?.getString(R.string.Exporting).toString(), count)
-                },
-                onProgressUpdate = { progress ->
-                    progressLiveData.value = progress
-                },
-                onPostExecute = onPostExecute@ { isSuccessful ->
-                    dialog?.dismiss()
-                    Toast.makeText(
-                        activity ?: return@onPostExecute,
-                        if(isSuccessful) "Done" else "Failed",
-                        Toast.LENGTH_SHORT
-                    ).show()
-                },
-            )
-
-        }
-
-    }
-
-    // Function to split a pdf file
-    private fun splitPdf() {
-
-        dialog?.dismiss()
-
-        dialog = SplitPdfDialog(object : OnDialogButtonClickListener {
-            override fun onDialogConfirm(result: Any) {
-                dialog?.dismiss()
-                try {
-                    pdfEditorViewModel.splitAtPosition = result.toString().toInt()
-                    if (pdfEditorViewModel.splitAtPosition in 1..pdfEditorViewModel.pages.lastIndex) {
-                        exportPdf(pdfEditorViewModel.pages.take(pdfEditorViewModel.splitAtPosition))
-                        exportPdf(pdfEditorViewModel.pages.takeLast(pdfEditorViewModel.pages.size-pdfEditorViewModel.splitAtPosition))
-                    } else {
-                        Toast.makeText(activity ?: return, "Enter a number between 1 and ${pdfEditorViewModel.pages.size - 1}", Toast.LENGTH_SHORT).show()
-                        splitPdf()
-                    }
-                } catch (e: NumberFormatException) {
-                    Toast.makeText(activity ?: return, activity?.getString(R.string.EnterANumber).toString(), Toast.LENGTH_SHORT).show()
-                    splitPdf()
-                }
-            }
-            override fun onDialogCancel() {
-
-            }
-        })
-
-        activity?.supportFragmentManager?.let {
-            dialog?.show(it, "splitPdfDialog")
-        }
-
-    }
-
     // Function to convert pdf pages into images
     private fun pdfToImages() {
         openDirectoryPicker(directoryPickerLauncher)
-    }
-
-    // Function to compress a pdf file
-    private fun compressPdf() {
-        lifecycleScope.launch {
-            pdfEditorViewModel.pdfEditor.compressPdf(
-                context = activity ?: return@launch,
-                pages = pdfEditorViewModel.pages.toList(),
-                outputFile = activity?.run {
-                    File(
-                        storageLocation().absolutePath
-                            .plus(File.separator)
-                            .plus(timeStamp)
-                            .plus("_compressed")
-                            .plus(PdfEditor.Constants.PDF_EXTENSION))
-                } ?: return@launch,
-                onPreExecute = { count ->
-                    progressDialog(activity?.getString(R.string.Compressing).toString(),count)
-                },
-                onProgressUpdate = { progress ->
-                    progressLiveData.value = progress
-                },
-                onPostExecute = onPostExecute@ { isSuccessful ->
-                    dialog?.dismiss()
-                    Toast.makeText(
-                        activity ?: return@onPostExecute,
-                        if(isSuccessful) "Done" else "Failed",
-                        Toast.LENGTH_SHORT
-                    ).show()
-                }
-            )
-        }
-    }
-
-    // Function to encrypt a pdf
-    private fun encryptPdf() {
-
-        dialog = EncryptPdfDialog(object : OnDialogButtonClickListener {
-
-            override fun onDialogConfirm(result: Any) {
-                dialog?.dismiss()
-                val inputPassword = result.toString()
-                if (inputPassword.isNotEmpty()) {
-
-                    lifecycleScope.launch {
-
-                        pdfEditorViewModel.pdfEditor.encryptPdf(
-                            context = activity ?: return@launch,
-                            pages = pdfEditorViewModel.pages.toList(),
-                            outputFile = activity?.run {
-                                File(
-                                    storageLocation().absolutePath
-                                        .plus(File.separator)
-                                        .plus(timeStamp)
-                                        .plus("_encrypted")
-                                        .plus(PdfEditor.Constants.PDF_EXTENSION)
-                                )
-                            } ?: return@launch,
-                            inputPassword = inputPassword,
-                            masterPassword = masterPassWord,
-                            onPreExecute = {count ->
-                                progressDialog(activity?.getString(R.string.Encrypting).toString(), count)
-                            },
-                            onProgressUpdate = { progress ->
-                                progressLiveData.value = progress
-                            },
-                            onPostExecute = onPostExecute@ { isSuccessful ->
-                                dialog?.dismiss()
-                                Toast.makeText(
-                                    activity ?: return@onPostExecute,
-                                    if(isSuccessful) "Done" else "Failed",
-                                    Toast.LENGTH_SHORT
-                                ).show()
-                            }
-                        )
-
-                    }
-
-                }
-            }
-
-            override fun onDialogCancel() {
-
-            }
-
-        })
-
-        activity?.supportFragmentManager?.let {
-            dialog?.show(it, "encryptPdfDialog")
-        }
-
-    }
-
-    private fun pageRenderer(inputPath: String) = lifecycleScope.launch {
-
-        try {
-
-            pdfEditorViewModel.pdfEditor.extractPdfPages(
-                context = activity ?: return@launch,
-                sourcePdfPath = inputPath,
-                onPreExecute = { count ->
-                    progressDialog(activity?.getString(R.string.Rendering).toString(), count)
-                },
-                onProgressUpdate = { progress ->
-                    progressLiveData.value = progress
-                },
-                onPostExecute = { isSuccessful, pdfFiles ->
-                    dialog?.dismiss()
-                    if(isSuccessful){
-                        if (pdfFiles.isNotEmpty()) {
-                            if (pdfEditorViewModel.pages.isNotEmpty()) {
-                                var i = pdfEditorViewModel.pages.size
-                                var j = 0
-                                while (j < pdfFiles.size) {
-                                    pdfEditorViewModel.pages.add(i, pdfFiles[j])
-                                    i++
-                                    j++
-                                }
-                            } else {
-                                pdfEditorViewModel.pages.clear()
-                                pdfEditorViewModel.pages.addAll(pdfFiles)
-                            }
-                        }
-                    }
-                }
-            )
-
-        }
-        catch (e : BadPasswordException){
-            if(pdfEditorViewModel.pages.isEmpty()){
-                Toast.makeText(activity ?: return@launch,activity?.getString(R.string.ThisPdfIsPasswordProtected),Toast.LENGTH_SHORT).show()
-                activity?.supportFragmentManager?.popBackStack()
-            }
-        }
-
-    }
-
-    private fun pageRenderer(inputBytes: ByteArray) = lifecycleScope.launch {
-
-        try {
-            pdfEditorViewModel.pdfEditor.extractPdfPages(
-                context = activity ?: return@launch,
-                bytes = inputBytes,
-                onPreExecute = { count ->
-                    progressDialog(activity?.getString(R.string.Rendering).toString(), count)
-                },
-                onProgressUpdate = { progress ->
-                    progressLiveData.value = progress
-                },
-                onPostExecute = { isSuccessful, pdfFiles ->
-                    dialog?.dismiss()
-                    if(isSuccessful){
-                        if (pdfFiles.isNotEmpty()) {
-                            if (pdfEditorViewModel.pages.isNotEmpty()) {
-                                var i = pdfEditorViewModel.pages.size
-                                var j = 0
-                                while (j < pdfFiles.size) {
-                                    pdfEditorViewModel.pages.add(i, pdfFiles[j])
-                                    i++
-                                    j++
-                                }
-                            } else {
-                                pdfEditorViewModel.pages.clear()
-                                pdfEditorViewModel.pages.addAll(pdfFiles)
-                            }
-                        }
-                    }
-                }
-            )
-        }
-        catch (e : BadPasswordException){
-            if(pdfEditorViewModel.pages.isEmpty()){
-                Toast.makeText(activity ?: return@launch,activity?.getString(R.string.ThisPdfIsPasswordProtected),Toast.LENGTH_SHORT).show()
-                activity?.supportFragmentManager?.popBackStack()
-            }
-        }
-
     }
 
     @Deprecated("Deprecated in Java")
