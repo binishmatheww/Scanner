@@ -4,6 +4,8 @@
     <string name="Scanner">Scanner</string>
     <string name="Open">Open</string>
     <string name="Close">Close</string>
+    <string name="Cancel">Cancel</string>
+    <string name="Ok">Ok</string>
     <string name="unknown">unknown</string>
     <string name="Settings">Settings</string>
     <string name="Up">Up</string>
@@ -17,6 +19,11 @@
     <string name="Rendering">Rendering</string>
     <string name="ConvertingPdfToImages">Converting pdf to images</string>
     <string name="EnterANumber">Enter a number</string>
+    <string name="EnterAPasswordToEncrypt">Enter a password to encrypt</string>
+    <string name="EnterAPassword">Enter a password</string>
+    <string name="EnterThePageNumberToSplitAt">Enter the page number to split at</string>
+    <string name="EnterThePageNumber">Enter the page number</string>
+    <string name="EnterANumberBetween1AndLastIndex">Enter a number between 1 and {lastIndex}</string>
     <string name="NeitherAPdfFileNorATextFile">Neither a Pdf file nor a Text file</string>
     <string name="ThisPdfIsPasswordProtected">This pdf is password protected</string>
 
