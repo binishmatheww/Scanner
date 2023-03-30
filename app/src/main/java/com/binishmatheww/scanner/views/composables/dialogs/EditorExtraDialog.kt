@@ -1,4 +1,4 @@
-package com.binishmatheww.scanner.views.fragments.dialogs
+package com.binishmatheww.scanner.views.composables.dialogs
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
