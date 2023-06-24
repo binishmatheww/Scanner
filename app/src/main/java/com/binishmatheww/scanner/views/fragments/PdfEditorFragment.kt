@@ -567,14 +567,33 @@ class PdfEditorFragment : Fragment() {
                         ),
                     onOptionSelected = {
                         when (it) {
-                            "addPdf" -> addPdf()
-                            "addImages" -> addImages()
-                            "addText" -> addTxt()
-                            "exportPdf" -> pdfEditorViewModel.exportPdf(pages = pdfEditorViewModel.pages.toList())
-                            "splitPdf" ->  pdfEditorViewModel.shouldShowSplitPdfDialog.value = true
-                            "pdfToImages" -> pdfToImages()
-                            "compressPdf" -> pdfEditorViewModel.compressPdf()
-                            "encryptPdf" -> pdfEditorViewModel.shouldShowEncryptPdfDialog.value = true
+                            "addPdf" -> {
+                                openFilePicker(TYPE_PDF, filePickerLauncher)
+                            }
+                            "addImages" -> {
+                                val intent = Intent(Intent.ACTION_PICK)
+                                intent.setDataAndType(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, TYPE_ANY_IMAGE)
+                                intent.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true)
+                                addImageLauncher.launch(Intent.createChooser(intent, activity?.getString(R.string.SelectOneOrMoreImages)))
+                            }
+                            "addText" -> {
+                                openFilePicker(TYPE_PLAIN_TXT, filePickerLauncher)
+                            }
+                            "exportPdf" -> {
+                                pdfEditorViewModel.exportPdf(pages = pdfEditorViewModel.pages.toList())
+                            }
+                            "splitPdf" -> {
+                                pdfEditorViewModel.shouldShowSplitPdfDialog.value = true
+                            }
+                            "pdfToImages" -> {
+                                openDirectoryPicker(directoryPickerLauncher)
+                            }
+                            "compressPdf" -> {
+                                pdfEditorViewModel.compressPdf()
+                            }
+                            "encryptPdf" -> {
+                                pdfEditorViewModel.shouldShowEncryptPdfDialog.value = true
+                            }
                         }
                     },
                     onDismissRequest = {
@@ -640,10 +659,10 @@ class PdfEditorFragment : Fragment() {
                         pdfEditorViewModel.splitAtPosition.value = 0
                         shouldShowSplitPdfDialog = false
                     },
-                    splitIndex = pdfEditorViewModel.password.value,
+                    splitIndex = pdfEditorViewModel.splitAtPosition.value,
                     onPageConfirmed = {
                         try {
-                            pdfEditorViewModel.splitAtPosition.value = it.toInt()
+                            pdfEditorViewModel.splitAtPosition.value = it
                             if (pdfEditorViewModel.splitAtPosition.value in 1..pdfEditorViewModel.pages.lastIndex) {
                                 shouldShowSplitPdfDialog = false
                                 pdfEditorViewModel.splitPdf(
@@ -666,35 +685,11 @@ class PdfEditorFragment : Fragment() {
 
     }
 
-    // Function to add images
-    private fun addImages() {
-        val intent = Intent(Intent.ACTION_PICK)
-        intent.setDataAndType(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, TYPE_ANY_IMAGE)
-        intent.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true)
-        addImageLauncher.launch(Intent.createChooser(intent, activity?.getString(R.string.SelectOneOrMoreImages)))
-    }
-
-    // Function to add pdf files
-    private fun addPdf() {
-        openFilePicker(TYPE_PDF, filePickerLauncher)
-    }
-
-    // Function to add txt files
-    private fun addTxt() {
-        openFilePicker(TYPE_PLAIN_TXT, filePickerLauncher)
-    }
-
-    // Function to convert pdf pages into images
-    private fun pdfToImages() {
-        openDirectoryPicker(directoryPickerLauncher)
-    }
-
     @Deprecated("Deprecated in Java")
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         if (requestCode == CropImage.CROP_IMAGE_ACTIVITY_REQUEST_CODE) {
             val result = CropImage.getActivityResult(data)
             result?.uri?.let { uri ->
-
                 activity
                     ?.contentResolver
                     ?.openInputStream(uri)

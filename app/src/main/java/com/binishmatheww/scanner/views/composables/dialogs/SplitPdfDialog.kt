@@ -29,8 +29,8 @@ fun SplitPdfDialog(
     dismissOnBackPress: Boolean = true,
     dismissOnClickOutside: Boolean = false,
     onDismissRequest: () -> Unit,
-    splitIndex: String,
-    onPageConfirmed: (String) -> Unit
+    splitIndex: Int,
+    onPageConfirmed: (Int) -> Unit
 ){
     var splt by rememberSaveable { mutableStateOf(splitIndex) }
     Dialog(
@@ -80,12 +80,12 @@ fun SplitPdfDialog(
                             text = LocalContext.current.getString(R.string.EnterThePageNumber)
                         )
                     },
-                    value = splt,
+                    value = splt.toString(),
                     keyboardOptions = KeyboardOptions(
                         keyboardType = KeyboardType.Number
                     ),
                     onValueChange = {
-                        splt = it
+                        splt = it.toIntOrNull() ?: 0
                     }
                 )
                 Button(
@@ -96,7 +96,7 @@ fun SplitPdfDialog(
                             end.linkTo(parent.end, 4.dp)
                             bottom.linkTo(parent.bottom, 8.dp)
                         },
-                    enabled = splt.isNotEmpty(),
+                    enabled = splt > 0,
                     onClick = {
                         onPageConfirmed.invoke(splt)
                     }
