@@ -525,30 +525,23 @@ class PdfEditorFragment : Fragment() {
 
                                 },
                                 onPageUp = { position ->
-
                                     if (position > 0) {
                                         val f = pdfEditorViewModel.pages[position - 1]
                                         pdfEditorViewModel.pages[position - 1] = pdfEditorViewModel.pages[position]
                                         pdfEditorViewModel.pages[position] = f
-                                        pdfEditorScope.launch {
-                                            pagePreviewState.animateScrollToItem(position-1)
-                                        }
+                                        pagePreviewState.animateScrollAndCentralizePdfPage(position, position-1, pdfEditorScope)
                                     }
-
                                 },
                                 onPageDelete = { position->
-
                                     pdfEditorViewModel.pages.removeAt(position)
-
                                 },
                                 onPageDown = { position ->
-
                                     if (position < pdfEditorViewModel.pages.lastIndex) {
                                         val f = pdfEditorViewModel.pages[position]
                                         pdfEditorViewModel.pages[position] = pdfEditorViewModel.pages[position + 1]
                                         pdfEditorViewModel.pages[position + 1] = f
+                                        pagePreviewState.animateScrollAndCentralizePdfPage(position, position+1, pdfEditorScope)
                                     }
-
                                 }
                             )
 

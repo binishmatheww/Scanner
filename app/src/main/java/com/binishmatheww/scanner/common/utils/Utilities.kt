@@ -382,6 +382,33 @@ fun LazyListState.animateScrollAndCentralizeItem(index: Int, scope: CoroutineSco
     }
 }
 
+fun LazyListState.animateScrollAndCentralizePdfPage(from: Int, to: Int, scope: CoroutineScope) {
+    scope.launch {
+
+        // TODO. Temporary fix for inconsistent scrollBy
+        this@animateScrollAndCentralizePdfPage.scrollToItem(to)
+
+        this@animateScrollAndCentralizePdfPage
+            .layoutInfo
+            .visibleItemsInfo
+            .firstOrNull { it.index == to } ?: this@animateScrollAndCentralizePdfPage.scrollToItem(to)
+
+        val itemInfo = this@animateScrollAndCentralizePdfPage
+            .layoutInfo
+            .visibleItemsInfo
+            .firstOrNull { it.index == to }
+
+        if (itemInfo != null) {
+            val center = this@animateScrollAndCentralizePdfPage.layoutInfo.viewportEndOffset / 2
+            val childCenter = itemInfo.offset + (itemInfo.size / 2)
+            this@animateScrollAndCentralizePdfPage.animateScrollBy((childCenter - center).toFloat())
+        } else {
+            this@animateScrollAndCentralizePdfPage.animateScrollToItem(to)
+        }
+
+    }
+}
+
 fun List<SmartSize>.getOptimalSizeFor(
     w: Int,
     h: Int
