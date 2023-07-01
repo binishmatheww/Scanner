@@ -74,7 +74,7 @@ class WelcomeScreenFragment : Fragment() {
                             end.linkTo(parent.end)
                         }
                         .size(200.dp),
-                    painter = painterResource(id = R.drawable.cameraic),
+                    painter = painterResource(id = R.drawable.scanner),
                     contentDescription = LocalContext.current.getString(R.string.appName),
                     colorFilter = ColorFilter.tint(MaterialTheme.colorScheme.primary)
                 )

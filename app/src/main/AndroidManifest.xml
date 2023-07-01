@@ -19,9 +19,9 @@
     <application
         android:allowBackup="false"
         android:name=".common.Scanner"
-        android:icon="@drawable/cameraic"
+        android:icon="@drawable/scanner"
         android:label="@string/appName"
-        android:roundIcon="@drawable/cameraic"
+        android:roundIcon="@drawable/scanner"
         android:supportsRtl="true"
         android:theme="@style/Theme.Scanner"
         android:hardwareAccelerated="false"
